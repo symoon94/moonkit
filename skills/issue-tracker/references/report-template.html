@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>월간 이슈 집계 보고서</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f8f9fa;
+    color: #1a1a2e;
+    padding: 2rem;
+  }
+
+  .header {
+    max-width: 1200px;
+    margin: 0 auto 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .header h1 { font-size: 1.5rem; font-weight: 700; }
+  .header .meta { color: #6c757d; font-size: 0.875rem; }
+
+  /* Summary cards */
+  .summary {
+    max-width: 1200px;
+    margin: 0 auto 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+  }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .card .label { font-size: 0.75rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.05em; }
+  .card .value { font-size: 2rem; font-weight: 700; margin-top: 0.25rem; }
+
+  /* Dismiss bar */
+  .dismiss-bar {
+    max-width: 1200px;
+    margin: 0 auto 0.75rem;
+    padding: 0.6rem 1rem;
+    background: #fff3cd;
+    border-radius: 8px;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.85rem;
+  }
+  .dismiss-bar.visible { display: flex; }
+  .dismiss-bar button {
+    background: none;
+    border: 1px solid #856404;
+    border-radius: 6px;
+    padding: 0.3rem 0.75rem;
+    color: #856404;
+    cursor: pointer;
+    font-size: 0.8rem;
+  }
+  .dismiss-bar button:hover { background: #856404; color: #fff; }
+
+  /* Table container */
+  .table-wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    overflow: hidden;
+  }
+  .table-toolbar {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .table-toolbar h2 { font-size: 1rem; font-weight: 600; }
+  .table-toolbar .controls { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .table-toolbar input, .table-toolbar select {
+    padding: 0.4rem 0.75rem;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    background: #fff;
+  }
+  .table-toolbar input { width: 180px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  thead th {
+    text-align: left;
+    padding: 0.75rem 0.75rem;
+    background: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #495057;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  thead th:hover { background: #e9ecef; }
+  thead th .sort-icon { margin-left: 4px; opacity: 0.3; }
+  thead th.active .sort-icon { opacity: 1; }
+  tbody td {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: middle;
+  }
+  tbody tr:hover { background: #f8f9fa; }
+  tbody tr.dismissing {
+    opacity: 0;
+    transform: translateX(20px);
+    transition: all 0.3s ease;
+  }
+
+  /* Severity badges */
+  .badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  .badge-high { background: #fde8e8; color: #c0392b; }
+  .badge-mid  { background: #fef3cd; color: #856404; }
+  .badge-low  { background: #d4edda; color: #155724; }
+
+  /* Scope tags */
+  .tag {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    margin: 1px 2px;
+    white-space: nowrap;
+    background: #e9ecef;
+    color: #495057;
+  }
+
+  /* Frequency bar */
+  .freq-cell { display: flex; align-items: center; gap: 0.5rem; }
+  .freq-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: #3b82f6;
+    min-width: 4px;
+    transition: width 0.3s;
+  }
+  .freq-num { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 1.5rem; }
+
+  /* Impact score */
+  .impact-score {
+    font-weight: 700;
+    font-size: 0.95rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Source icons */
+  .source-icon { font-size: 0.8rem; opacity: 0.7; }
+
+  /* Dismiss button */
+  .btn-dismiss {
+    background: none;
+    border: none;
+    color: #adb5bd;
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 0 0.3rem;
+    line-height: 1;
+    border-radius: 4px;
+    transition: all 0.15s;
+  }
+  .btn-dismiss:hover { color: #e74c3c; background: #fde8e8; }
+
+  /* Links expandable */
+  .issue-cell { position: relative; }
+  .issue-title { cursor: default; }
+  .issue-links {
+    display: none;
+    margin-top: 0.4rem;
+    padding-left: 0.5rem;
+    border-left: 2px solid #dee2e6;
+  }
+  .issue-links.open { display: block; }
+  .issue-links a {
+    display: block;
+    font-size: 0.75rem;
+    color: #3b82f6;
+    text-decoration: none;
+    padding: 0.15rem 0;
+  }
+  .issue-links a:hover { text-decoration: underline; }
+  .link-toggle {
+    font-size: 0.7rem;
+    color: #6c757d;
+    cursor: pointer;
+    margin-left: 0.5rem;
+  }
+  .link-toggle:hover { color: #3b82f6; }
+
+  /* Dismissed issues panel */
+  .dismissed-panel {
+    max-width: 1200px;
+    margin: 1rem auto 0;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    overflow: hidden;
+    display: none;
+  }
+  .dismissed-panel.visible { display: block; }
+  .dismissed-header {
+    padding: 0.75rem 1.5rem;
+    background: #f8f9fa;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #6c757d;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .dismissed-header:hover { background: #e9ecef; }
+  .dismissed-list { padding: 0.5rem 1.5rem 1rem; display: none; }
+  .dismissed-list.open { display: block; }
+  .dismissed-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 0.85rem;
+  }
+  .btn-restore {
+    font-size: 0.75rem;
+    color: #3b82f6;
+    cursor: pointer;
+    background: none;
+    border: none;
+  }
+  .btn-restore:hover { text-decoration: underline; }
+
+  /* Action cards */
+  .actions-section {
+    max-width: 1200px;
+    margin: 1.5rem auto 0;
+  }
+  .actions-section h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+  .action-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    margin-bottom: 0.75rem;
+    border-left: 4px solid #3b82f6;
+  }
+  .action-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .action-card .why { font-size: 0.85rem; color: #495057; margin-bottom: 0.5rem; }
+  .action-card .action { font-size: 0.85rem; color: #1a1a2e; font-weight: 500; margin-bottom: 0.5rem; }
+  .action-card .evidence { padding-left: 0.75rem; border-left: 2px solid #dee2e6; }
+  .action-card .evidence a {
+    display: block;
+    font-size: 0.75rem;
+    color: #3b82f6;
+    text-decoration: none;
+    padding: 0.15rem 0;
+  }
+  .action-card .evidence a:hover { text-decoration: underline; }
+
+  /* Export button */
+  .export-bar {
+    max-width: 1200px;
+    margin: 1.5rem auto 0;
+    text-align: right;
+  }
+  .btn-export {
+    padding: 0.5rem 1rem;
+    background: #3b82f6;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  .btn-export:hover { background: #2563eb; }
+
+  .footer {
+    max-width: 1200px;
+    margin: 1rem auto 0;
+    font-size: 0.75rem;
+    color: #adb5bd;
+    text-align: right;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 id="reportTitle">월간 이슈 집계</h1>
+  <div class="meta">집계 기간: <span id="period"></span></div>
+</div>
+
+<!-- Summary cards -->
+<div class="summary">
+  <div class="card">
+    <div class="label">총 이슈</div>
+    <div class="value" id="totalCount">0</div>
+  </div>
+  <div class="card">
+    <div class="label">심각도 상</div>
+    <div class="value" id="highCount" style="color:#c0392b">0</div>
+  </div>
+  <div class="card">
+    <div class="label">가장 많이 발생</div>
+    <div class="value" id="topIssue" style="font-size:1rem">-</div>
+  </div>
+  <div class="card">
+    <div class="label">영향 범위 최다</div>
+    <div class="value" id="topScope" style="font-size:1rem">-</div>
+  </div>
+</div>
+
+<!-- Dismiss bar -->
+<div class="dismiss-bar" id="dismissBar">
+  <span><strong id="dismissCount">0</strong>건 제외됨</span>
+  <button onclick="undoLastDismiss()">되돌리기</button>
+</div>
+
+<!-- Table -->
+<div class="table-wrap">
+  <div class="table-toolbar">
+    <h2>이슈 목록 <span style="font-weight:400;color:#adb5bd;font-size:0.85rem" id="rowCount"></span></h2>
+    <div class="controls">
+      <input type="text" id="searchInput" placeholder="이슈 검색...">
+      <select id="severityFilter">
+        <option value="all">전체 심각도</option>
+        <option value="상">상</option>
+        <option value="중">중</option>
+        <option value="하">하</option>
+      </select>
+      <select id="scopeFilter"><option value="all">전체 영향 범위</option></select>
+    </div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:36px"></th>
+        <th data-sort="rank" class="active" style="width:40px"># <span class="sort-icon">▼</span></th>
+        <th data-sort="severity" style="width:70px">심각도 <span class="sort-icon">▼</span></th>
+        <th data-sort="issue">이슈 <span class="sort-icon">▼</span></th>
+        <th data-sort="scope">영향 범위 <span class="sort-icon">▼</span></th>
+        <th data-sort="freq" style="width:110px">빈도 <span class="sort-icon">▼</span></th>
+        <th data-sort="impact" style="width:70px">점수 <span class="sort-icon">▼</span></th>
+        <th style="width:50px">소스</th>
+      </tr>
+    </thead>
+    <tbody id="issueBody"></tbody>
+  </table>
+</div>
+
+<!-- Dismissed issues panel -->
+<div class="dismissed-panel" id="dismissedPanel">
+  <div class="dismissed-header" onclick="toggleDismissedList()">
+    <span>제외된 이슈 (<span id="dismissedPanelCount">0</span>건)</span>
+    <span id="dismissedArrow">&#9654;</span>
+  </div>
+  <div class="dismissed-list" id="dismissedList"></div>
+</div>
+
+<!-- Action cards -->
+<div class="actions-section" id="actionsSection">
+  <h2>권장 액션 — TOP 3</h2>
+  <div id="actionCards"></div>
+</div>
+
+<!-- Export -->
+<div class="export-bar">
+  <button class="btn-export" onclick="exportClean()">정리된 보고서 다운로드 (HTML)</button>
+</div>
+
+<div class="footer">
+  정렬: 심각도(상→하) → 영향 범위 수(많→적) → 빈도(높→낮) · 헤더 클릭으로 재정렬 · ✕로 이슈 제외
+</div>
+
+<script>
+// ========== DATA: /issue-tracker 스킬이 수집 후 자동 주입 ==========
+const DATA = [
+  // {
+  //   issue: "이슈 제목",
+  //   severity: "상|중|하",
+  //   scopes: ["우리팀", ...],
+  //   freq: 숫자,
+  //   source: "slack|gmail|both",
+  //   links: [{ type: "slack", url: "...", text: "3/5 — 메시지" }]
+  // }
+];
+const REPORT_META = {
+  team: "",        // 팀명
+  period: "",      // "2026년 03월"
+  start: "",       // "2026-03-01"
+  end: ""          // "2026-03-31"
+};
+// ==================================================================
+
+let activeData = [...DATA];
+let dismissed = [];
+
+const SEVERITY_ORDER = { "상": 0, "중": 1, "하": 2 };
+const SEVERITY_CLASS = { "상": "badge-high", "중": "badge-mid", "하": "badge-low" };
+const SOURCE_ICON = { slack: "#", gmail: "@", both: "#@" };
+
+function impactScore(d) {
+  const sw = { "상": 3, "중": 2, "하": 1 };
+  return sw[d.severity] * d.scopes.length * d.freq;
+}
+
+function defaultSort(a, b) {
+  const s = SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity];
+  if (s !== 0) return s;
+  const sc = b.scopes.length - a.scopes.length;
+  if (sc !== 0) return sc;
+  return b.freq - a.freq;
+}
+
+let currentSort = { key: "rank", asc: true };
+
+function getFiltered() {
+  const q = document.getElementById("searchInput").value.toLowerCase();
+  const sev = document.getElementById("severityFilter").value;
+  const scp = document.getElementById("scopeFilter").value;
+  return activeData.filter(d => {
+    if (q && !d.issue.toLowerCase().includes(q)) return false;
+    if (sev !== "all" && d.severity !== sev) return false;
+    if (scp !== "all" && !d.scopes.includes(scp)) return false;
+    return true;
+  });
+}
+
+function sortData(list) {
+  const sorted = [...list];
+  if (currentSort.key === "rank") {
+    sorted.sort(defaultSort);
+    if (!currentSort.asc) sorted.reverse();
+    return sorted;
+  }
+  const dir = currentSort.asc ? 1 : -1;
+  sorted.sort((a, b) => {
+    switch (currentSort.key) {
+      case "severity": return dir * (SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
+      case "issue": return dir * a.issue.localeCompare(b.issue, "ko");
+      case "scope": return dir * (a.scopes.join(",").localeCompare(b.scopes.join(","), "ko"));
+      case "freq": return dir * (a.freq - b.freq);
+      case "impact": return dir * (impactScore(a) - impactScore(b));
+    }
+    return 0;
+  });
+  return sorted;
+}
+
+// ── Dismiss / Restore ──
+
+function dismissIssue(idx) {
+  const filtered = sortData(getFiltered());
+  const target = filtered[idx];
+  const realIdx = activeData.indexOf(target);
+  if (realIdx === -1) return;
+
+  // Animate out
+  const row = document.querySelectorAll("#issueBody tr")[idx];
+  if (row) {
+    row.classList.add("dismissing");
+    setTimeout(() => {
+      dismissed.push(activeData.splice(realIdx, 1)[0]);
+      render();
+      updateDismissUI();
+    }, 300);
+  } else {
+    dismissed.push(activeData.splice(realIdx, 1)[0]);
+    render();
+    updateDismissUI();
+  }
+}
+
+function undoLastDismiss() {
+  if (dismissed.length === 0) return;
+  activeData.push(dismissed.pop());
+  render();
+  updateDismissUI();
+}
+
+function restoreByIndex(dIdx) {
+  activeData.push(dismissed.splice(dIdx, 1)[0]);
+  render();
+  updateDismissUI();
+}
+
+function updateDismissUI() {
+  const bar = document.getElementById("dismissBar");
+  const panel = document.getElementById("dismissedPanel");
+  if (dismissed.length > 0) {
+    bar.classList.add("visible");
+    panel.classList.add("visible");
+    document.getElementById("dismissCount").textContent = dismissed.length;
+    document.getElementById("dismissedPanelCount").textContent = dismissed.length;
+  } else {
+    bar.classList.remove("visible");
+    panel.classList.remove("visible");
+  }
+  renderDismissedList();
+}
+
+function renderDismissedList() {
+  const list = document.getElementById("dismissedList");
+  list.innerHTML = dismissed.map((d, i) =>
+    `<div class="dismissed-item">
+      <span><span class="badge ${SEVERITY_CLASS[d.severity]}">${d.severity}</span> ${d.issue}</span>
+      <button class="btn-restore" onclick="restoreByIndex(${i})">복원</button>
+    </div>`
+  ).join("");
+}
+
+function toggleDismissedList() {
+  const list = document.getElementById("dismissedList");
+  const arrow = document.getElementById("dismissedArrow");
+  list.classList.toggle("open");
+  arrow.textContent = list.classList.contains("open") ? "\u25BC" : "\u25B6";
+}
+
+// ── Render ──
+
+function render() {
+  const maxFreq = Math.max(...activeData.map(d => d.freq), 1);
+  const filtered = sortData(getFiltered());
+  const tbody = document.getElementById("issueBody");
+  tbody.innerHTML = "";
+
+  filtered.forEach((d, i) => {
+    const score = impactScore(d);
+    const barW = Math.round((d.freq / maxFreq) * 80);
+    const scopeTags = d.scopes.map(s => `<span class="tag">${s}</span>`).join("");
+    const srcIcon = SOURCE_ICON[d.source] || "";
+
+    // Links section
+    let linksHtml = "";
+    if (d.links && d.links.length > 0) {
+      const linkItems = d.links.map(l =>
+        `<a href="${l.url}" target="_blank">${l.type === "slack" ? "#" : "@"} ${l.text}</a>`
+      ).join("");
+      linksHtml = `<span class="link-toggle" onclick="this.nextElementSibling.classList.toggle('open')">${d.links.length}개 링크</span>
+        <div class="issue-links">${linkItems}</div>`;
+    }
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><button class="btn-dismiss" onclick="dismissIssue(${i})" title="이 이슈 제외">&#10005;</button></td>
+      <td style="color:#adb5bd;font-weight:600">${i + 1}</td>
+      <td><span class="badge ${SEVERITY_CLASS[d.severity]}">${d.severity}</span></td>
+      <td class="issue-cell">
+        <span class="issue-title">${d.issue}</span>
+        ${linksHtml}
+      </td>
+      <td>${scopeTags}</td>
+      <td><div class="freq-cell"><span class="freq-num">${d.freq}</span><div class="freq-bar" style="width:${barW}px"></div></div></td>
+      <td><span class="impact-score">${score}</span></td>
+      <td><span class="source-icon">${srcIcon}</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById("rowCount").textContent = `(${filtered.length}건)`;
+
+  // Summary cards — based on activeData (excludes dismissed)
+  document.getElementById("totalCount").textContent = activeData.length;
+  document.getElementById("highCount").textContent = activeData.filter(d => d.severity === "상").length;
+
+  const topByFreq = [...activeData].sort((a, b) => b.freq - a.freq)[0];
+  document.getElementById("topIssue").textContent = topByFreq ? truncate(topByFreq.issue, 18) : "-";
+
+  const scopeCounts = {};
+  activeData.forEach(d => d.scopes.forEach(s => { scopeCounts[s] = (scopeCounts[s] || 0) + 1; }));
+  const topScopeEntry = Object.entries(scopeCounts).sort((a, b) => b[1] - a[1])[0];
+  document.getElementById("topScope").textContent = topScopeEntry ? `${topScopeEntry[0]} (${topScopeEntry[1]}건)` : "-";
+
+  renderActionCards();
+}
+
+function truncate(s, n) { return s.length > n ? s.slice(0, n) + "..." : s; }
+
+// ── Action Cards (TOP 3) ──
+
+function renderActionCards() {
+  const sorted = [...activeData].sort(defaultSort);
+  const top3 = sorted.slice(0, 3);
+  const container = document.getElementById("actionCards");
+
+  if (top3.length === 0) {
+    container.innerHTML = '<p style="color:#adb5bd;font-size:0.85rem">이슈가 없습니다.</p>';
+    return;
+  }
+
+  container.innerHTML = top3.map((d, i) => {
+    const score = impactScore(d);
+    const linksHtml = (d.links || []).slice(0, 3).map(l =>
+      `<a href="${l.url}" target="_blank">${l.type === "slack" ? "#" : "@"} ${l.text}</a>`
+    ).join("");
+
+    return `<div class="action-card">
+      <h3>${i + 1}. ${d.issue}</h3>
+      <p class="why">심각도 ${d.severity} x ${d.scopes.length}개 범위 x ${d.freq}회 = 점수 ${score}.
+      영향 범위: ${d.scopes.join(", ")}</p>
+      <p class="action">*권장 액션은 스킬이 수집 맥락을 기반으로 자동 생성합니다*</p>
+      ${linksHtml ? `<div class="evidence">${linksHtml}</div>` : ""}
+    </div>`;
+  }).join("");
+}
+
+// ── Dynamic scope filter ──
+
+function buildScopeFilter() {
+  const allScopes = new Set();
+  DATA.forEach(d => d.scopes.forEach(s => allScopes.add(s)));
+  const sel = document.getElementById("scopeFilter");
+  [...allScopes].sort().forEach(s => {
+    const opt = document.createElement("option");
+    opt.value = s;
+    opt.textContent = s;
+    sel.appendChild(opt);
+  });
+}
+
+// ── Column sort ──
+
+document.querySelectorAll("thead th[data-sort]").forEach(th => {
+  th.addEventListener("click", () => {
+    const key = th.dataset.sort;
+    if (currentSort.key === key) {
+      currentSort.asc = !currentSort.asc;
+    } else {
+      currentSort = { key, asc: true };
+    }
+    document.querySelectorAll("thead th").forEach(t => t.classList.remove("active"));
+    th.classList.add("active");
+    const icon = th.querySelector(".sort-icon");
+    if (icon) icon.textContent = currentSort.asc ? "\u25BC" : "\u25B2";
+    render();
+  });
+});
+
+// ── Filters ──
+
+document.getElementById("searchInput").addEventListener("input", render);
+document.getElementById("severityFilter").addEventListener("change", render);
+document.getElementById("scopeFilter").addEventListener("change", render);
+
+// ── Export cleaned HTML ──
+
+function exportClean() {
+  // Clone current document, remove dismissed, remove JS interactivity
+  const html = document.documentElement.cloneNode(true);
+  // Update DATA in the clone to only activeData
+  const scriptTag = html.querySelector("script");
+  if (scriptTag) {
+    const cleanData = JSON.stringify(activeData, null, 2);
+    scriptTag.textContent = scriptTag.textContent.replace(
+      /const DATA = \[[\s\S]*?\];/,
+      `const DATA = ${cleanData};`
+    );
+  }
+  const blob = new Blob(["<!DOCTYPE html>\n" + html.outerHTML], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `issue-tracker-clean-${new Date().toISOString().slice(0,10)}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Init ──
+
+function init() {
+  // Set header
+  if (REPORT_META.team) {
+    document.getElementById("reportTitle").textContent = `${REPORT_META.team} · 월간 이슈 집계`;
+  }
+  if (REPORT_META.period) {
+    document.getElementById("period").textContent = REPORT_META.period;
+  } else {
+    const now = new Date();
+    const y = now.getFullYear(), m = now.getMonth();
+    const last = new Date(y, m + 1, 0).getDate();
+    document.getElementById("period").textContent =
+      `${y}.${String(m+1).padStart(2,"0")}.01 - ${y}.${String(m+1).padStart(2,"0")}.${last}`;
+  }
+
+  activeData = [...DATA];
+  buildScopeFilter();
+  render();
+}
+
+init();
+</script>
+</body>
+</html>
