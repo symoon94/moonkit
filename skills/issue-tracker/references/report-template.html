@@ -202,6 +202,19 @@
     padding: 0.15rem 0;
   }
   .issue-links a:hover { text-decoration: underline; }
+  .snippet {
+    font-size: 0.75rem;
+    color: #6c757d;
+    font-style: italic;
+    margin-top: 0.25rem;
+    line-height: 1.4;
+    max-width: 400px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .snippet a { color: #6c757d; text-decoration: none; }
+  .snippet a:hover { color: #3b82f6; text-decoration: underline; }
   .link-toggle {
     font-size: 0.7rem;
     color: #6c757d;
@@ -427,13 +440,24 @@ function escapeHtml(str) {
   return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
 }
 
+function safeUrl(url) {
+  if (typeof url !== "string") return "#";
+  const trimmed = url.trim().toLowerCase();
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return escapeHtml(url);
+  return "#";
+}
+
 const SEVERITY_ORDER = { "상": 0, "중": 1, "하": 2 };
-const SEVERITY_CLASS = { "상": "badge-high", "중": "badge-mid", "하": "badge-low" };
+const SEVERITY_CLASS = { "상": "badge-high", "중": "badge-mid", "하": "badge-low", _default: "badge-low" };
 const SOURCE_ICON = { slack: "#", gmail: "@", both: "#@" };
 
 function impactScore(d) {
   const sw = { "상": 3, "중": 2, "하": 1 };
-  return sw[d.severity] * d.scopes.length * d.freq;
+  return (sw[d.severity] ?? 0) * (d.scopes?.length ?? 0) * (d.freq ?? 0);
+}
+
+function sevClass(sev) {
+  return SEVERITY_CLASS[sev] || SEVERITY_CLASS._default;
 }
 
 function defaultSort(a, b) {
@@ -487,17 +511,15 @@ function dismissIssue(idx) {
   const realIdx = activeData.indexOf(target);
   if (realIdx === -1) return;
 
-  // Animate out
+  // Splice immediately to prevent race condition on rapid clicks
+  dismissed.push(activeData.splice(realIdx, 1)[0]);
+
+  // Animate out then re-render
   const row = document.querySelectorAll("#issueBody tr")[idx];
   if (row) {
     row.classList.add("dismissing");
-    setTimeout(() => {
-      dismissed.push(activeData.splice(realIdx, 1)[0]);
-      render();
-      updateDismissUI();
-    }, 300);
+    setTimeout(() => { render(); updateDismissUI(); }, 300);
   } else {
-    dismissed.push(activeData.splice(realIdx, 1)[0]);
     render();
     updateDismissUI();
   }
@@ -535,7 +557,7 @@ function renderDismissedList() {
   const list = document.getElementById("dismissedList");
   list.innerHTML = dismissed.map((d, i) =>
     `<div class="dismissed-item">
-      <span><span class="badge ${SEVERITY_CLASS[d.severity]}">${escapeHtml(d.severity)}</span> ${escapeHtml(d.issue)}</span>
+      <span><span class="badge ${sevClass(d.severity)}">${escapeHtml(d.severity)}</span> ${escapeHtml(d.issue)}</span>
       <button class="btn-restore" onclick="restoreByIndex(${i})">복원</button>
     </div>`
   ).join("");
@@ -551,7 +573,7 @@ function toggleDismissedList() {
 // ── Render ──
 
 function render() {
-  const maxFreq = Math.max(...activeData.map(d => d.freq), 1);
+  const maxFreq = activeData.reduce((m, d) => Math.max(m, d.freq || 0), 1);
   const filtered = sortData(getFiltered());
   const tbody = document.getElementById("issueBody");
   tbody.innerHTML = "";
@@ -566,7 +588,7 @@ function render() {
     let linksHtml = "";
     if (d.links && d.links.length > 0) {
       const linkItems = d.links.map(l =>
-        `<a href="${escapeHtml(l.url)}" target="_blank" rel="noopener">${l.type === "slack" ? "#" : "@"} ${escapeHtml(l.text)}</a>`
+        `<a href="${safeUrl(l.url)}" target="_blank" rel="noopener">${l.type === "slack" ? "#" : "@"} ${escapeHtml(l.text)}</a>`
       ).join("");
       linksHtml = `<span class="link-toggle" onclick="this.nextElementSibling.classList.toggle('open')">${d.links.length}개 링크</span>
         <div class="issue-links">${linkItems}</div>`;
@@ -576,9 +598,10 @@ function render() {
     tr.innerHTML = `
       <td><button class="btn-dismiss" onclick="dismissIssue(${i})" title="이 이슈 제외">&#10005;</button></td>
       <td style="color:#adb5bd;font-weight:600">${i + 1}</td>
-      <td><span class="badge ${SEVERITY_CLASS[d.severity]}">${escapeHtml(d.severity)}</span></td>
+      <td><span class="badge ${sevClass(d.severity)}">${escapeHtml(d.severity)}</span></td>
       <td class="issue-cell">
         <span class="issue-title">${escapeHtml(d.issue)}</span>
+        ${d.snippet ? `<div class="snippet">${d.snippetLink ? `<a href="${safeUrl(d.snippetLink)}" target="_blank" rel="noopener">` : ""}"${escapeHtml(d.snippet)}"${d.snippetLink ? "</a>" : ""}</div>` : ""}
         ${linksHtml}
       </td>
       <td>${scopeTags}</td>
@@ -623,7 +646,7 @@ function renderActionCards() {
   container.innerHTML = top3.map((d, i) => {
     const score = impactScore(d);
     const linksHtml = (d.links || []).slice(0, 3).map(l =>
-      `<a href="${escapeHtml(l.url)}" target="_blank" rel="noopener">${l.type === "slack" ? "#" : "@"} ${escapeHtml(l.text)}</a>`
+      `<a href="${safeUrl(l.url)}" target="_blank" rel="noopener">${l.type === "slack" ? "#" : "@"} ${escapeHtml(l.text)}</a>`
     ).join("");
 
     return `<div class="action-card">
