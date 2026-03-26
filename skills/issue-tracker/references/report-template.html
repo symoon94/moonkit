@@ -422,6 +422,11 @@ const REPORT_META = {
 let activeData = [...DATA];
 let dismissed = [];
 
+function escapeHtml(str) {
+  if (typeof str !== "string") return str;
+  return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+}
+
 const SEVERITY_ORDER = { "상": 0, "중": 1, "하": 2 };
 const SEVERITY_CLASS = { "상": "badge-high", "중": "badge-mid", "하": "badge-low" };
 const SOURCE_ICON = { slack: "#", gmail: "@", both: "#@" };
@@ -530,7 +535,7 @@ function renderDismissedList() {
   const list = document.getElementById("dismissedList");
   list.innerHTML = dismissed.map((d, i) =>
     `<div class="dismissed-item">
-      <span><span class="badge ${SEVERITY_CLASS[d.severity]}">${d.severity}</span> ${d.issue}</span>
+      <span><span class="badge ${SEVERITY_CLASS[d.severity]}">${escapeHtml(d.severity)}</span> ${escapeHtml(d.issue)}</span>
       <button class="btn-restore" onclick="restoreByIndex(${i})">복원</button>
     </div>`
   ).join("");
@@ -554,14 +559,14 @@ function render() {
   filtered.forEach((d, i) => {
     const score = impactScore(d);
     const barW = Math.round((d.freq / maxFreq) * 80);
-    const scopeTags = d.scopes.map(s => `<span class="tag">${s}</span>`).join("");
+    const scopeTags = d.scopes.map(s => `<span class="tag">${escapeHtml(s)}</span>`).join("");
     const srcIcon = SOURCE_ICON[d.source] || "";
 
     // Links section
     let linksHtml = "";
     if (d.links && d.links.length > 0) {
       const linkItems = d.links.map(l =>
-        `<a href="${l.url}" target="_blank">${l.type === "slack" ? "#" : "@"} ${l.text}</a>`
+        `<a href="${escapeHtml(l.url)}" target="_blank" rel="noopener">${l.type === "slack" ? "#" : "@"} ${escapeHtml(l.text)}</a>`
       ).join("");
       linksHtml = `<span class="link-toggle" onclick="this.nextElementSibling.classList.toggle('open')">${d.links.length}개 링크</span>
         <div class="issue-links">${linkItems}</div>`;
@@ -571,9 +576,9 @@ function render() {
     tr.innerHTML = `
       <td><button class="btn-dismiss" onclick="dismissIssue(${i})" title="이 이슈 제외">&#10005;</button></td>
       <td style="color:#adb5bd;font-weight:600">${i + 1}</td>
-      <td><span class="badge ${SEVERITY_CLASS[d.severity]}">${d.severity}</span></td>
+      <td><span class="badge ${SEVERITY_CLASS[d.severity]}">${escapeHtml(d.severity)}</span></td>
       <td class="issue-cell">
-        <span class="issue-title">${d.issue}</span>
+        <span class="issue-title">${escapeHtml(d.issue)}</span>
         ${linksHtml}
       </td>
       <td>${scopeTags}</td>
@@ -591,7 +596,7 @@ function render() {
   document.getElementById("highCount").textContent = activeData.filter(d => d.severity === "상").length;
 
   const topByFreq = [...activeData].sort((a, b) => b.freq - a.freq)[0];
-  document.getElementById("topIssue").textContent = topByFreq ? truncate(topByFreq.issue, 18) : "-";
+  document.getElementById("topIssue").textContent = topByFreq ? truncate(topByFreq.issue, 18) : "-";  // textContent is safe — no innerHTML
 
   const scopeCounts = {};
   activeData.forEach(d => d.scopes.forEach(s => { scopeCounts[s] = (scopeCounts[s] || 0) + 1; }));
@@ -618,13 +623,13 @@ function renderActionCards() {
   container.innerHTML = top3.map((d, i) => {
     const score = impactScore(d);
     const linksHtml = (d.links || []).slice(0, 3).map(l =>
-      `<a href="${l.url}" target="_blank">${l.type === "slack" ? "#" : "@"} ${l.text}</a>`
+      `<a href="${escapeHtml(l.url)}" target="_blank" rel="noopener">${l.type === "slack" ? "#" : "@"} ${escapeHtml(l.text)}</a>`
     ).join("");
 
     return `<div class="action-card">
-      <h3>${i + 1}. ${d.issue}</h3>
-      <p class="why">심각도 ${d.severity} x ${d.scopes.length}개 범위 x ${d.freq}회 = 점수 ${score}.
-      영향 범위: ${d.scopes.join(", ")}</p>
+      <h3>${i + 1}. ${escapeHtml(d.issue)}</h3>
+      <p class="why">심각도 ${escapeHtml(d.severity)} x ${d.scopes.length}개 범위 x ${d.freq}회 = 점수 ${score}.
+      영향 범위: ${d.scopes.map(s => escapeHtml(s)).join(", ")}</p>
       <p class="action">*권장 액션은 스킬이 수집 맥락을 기반으로 자동 생성합니다*</p>
       ${linksHtml ? `<div class="evidence">${linksHtml}</div>` : ""}
     </div>`;
