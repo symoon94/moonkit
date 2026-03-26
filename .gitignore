@@ -12,6 +12,4 @@ Thumbs.db
 .claude/
 
 # Output (user data, not committed)
-journals/
-snapshots/
-brag-doc.md
+output/
