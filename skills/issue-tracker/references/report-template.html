@@ -409,17 +409,9 @@
 </div>
 
 <script>
-// ========== DATA: /issue-tracker 스킬이 수집 후 자동 주입 ==========
-const DATA = [
-  // {
-  //   issue: "이슈 제목",
-  //   severity: "상|중|하",
-  //   scopes: ["우리팀", ...],
-  //   freq: 숫자,
-  //   source: "slack|gmail|both",
-  //   links: [{ type: "slack", url: "...", text: "3/5 — 메시지" }]
-  // }
-];
+// __DATA_START__
+const DATA = [];
+// __DATA_END__
 const REPORT_META = {
   team: "",        // 팀명
   period: "",      // "2026년 03월"
@@ -696,24 +688,14 @@ function exportClean() {
   const html = document.documentElement.cloneNode(true);
   const scriptTag = html.querySelector("script");
   if (scriptTag) {
-    const cleanData = JSON.stringify(activeData, null, 2);
     const src = scriptTag.textContent;
-    const startMarker = "const DATA = [";
+    const startMarker = "// __DATA_START__";
+    const endMarker = "// __DATA_END__";
     const startIdx = src.indexOf(startMarker);
-    if (startIdx !== -1) {
-      // Find the matching closing ]; by counting bracket depth
-      let depth = 0;
-      let endIdx = -1;
-      for (let i = startIdx + startMarker.length - 1; i < src.length; i++) {
-        if (src[i] === "[") depth++;
-        else if (src[i] === "]") { depth--; if (depth === 0) { endIdx = i; break; } }
-      }
-      if (endIdx !== -1) {
-        // Find the semicolon after the closing bracket
-        const semi = src.indexOf(";", endIdx);
-        const cutEnd = semi !== -1 ? semi + 1 : endIdx + 1;
-        scriptTag.textContent = src.slice(0, startIdx) + "const DATA = " + cleanData + ";" + src.slice(cutEnd);
-      }
+    const endIdx = src.indexOf(endMarker);
+    if (startIdx !== -1 && endIdx !== -1) {
+      const cleanData = JSON.stringify(activeData, null, 2);
+      scriptTag.textContent = src.slice(0, startIdx) + startMarker + "\nconst DATA = " + cleanData + ";\n" + src.slice(endIdx);
     }
   }
   const blob = new Blob(["<!DOCTYPE html>\n" + html.outerHTML], { type: "text/html" });
