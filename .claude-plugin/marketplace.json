@@ -6,7 +6,7 @@
   "plugins": [
     {
       "name": "moonkit",
-      "source": ".",
+      "source": "./",
       "description": "Work automation skills — issue tracking and work logging",
       "version": "0.2.0"
     }
