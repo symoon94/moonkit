@@ -1,0 +1,14 @@
+{
+  "name": "moonkit",
+  "owner": {
+    "name": "Sooyoung Moon"
+  },
+  "plugins": [
+    {
+      "name": "moonkit",
+      "source": ".",
+      "description": "Work automation skills — issue tracking and work logging",
+      "version": "0.2.0"
+    }
+  ]
+}

@@ -1,46 +1,29 @@
 # moonkit
 
-Claude Code skills for work automation.
+Claude Code plugin for work automation.
 
 ## Installation
 
-```bash
-# 1. Clone
-git clone https://github.com/symoon94/moonkit.git
+Claude Code에서 아래 명령어를 실행하세요:
 
-# 2. Install skills to your project
-cd your-project
-/path/to/moonkit/install.sh
-
-# Or install globally (all projects)
-/path/to/moonkit/install.sh --global
+```
+/plugin marketplace add symoon94/moonkit
+/plugin install moonkit@moonkit
 ```
 
-The installer creates symlinks from your `.claude/skills/` to the moonkit `skills/` directory. This means:
-- Skills stay up to date when you `git pull` moonkit
-- No file duplication
-- Works with any Claude Code project
-
-### Manual install
-
-If you prefer not to use symlinks, copy the skill directories directly:
-
-```bash
-cp -r /path/to/moonkit/skills/issue-tracker .claude/skills/
-cp -r /path/to/moonkit/skills/work-log .claude/skills/
-```
+설치 후 `/issue-tracker`, `/work-log` 명령어를 사용할 수 있습니다.
 
 ### Required MCP servers
 
-Skills use these MCP integrations (enable as needed in Claude Code settings):
+스킬에서 사용하는 MCP 연동입니다. 필요한 것만 Claude Code 설정에서 활성화하세요.
 
 | MCP | Used by | Purpose |
 |-----|---------|---------|
-| Slack | issue-tracker, work-log | Channel/DM message search and thread reading |
-| Gmail | issue-tracker | Email search and thread reading |
-| Notion | issue-tracker, work-log | Report output to Notion pages |
-| Jira | work-log | Issue tracking data |
-| Google Calendar | work-log | Meeting/schedule data |
+| Slack | issue-tracker, work-log | 채널/DM 메시지 검색, 스레드 읽기 |
+| Gmail | issue-tracker | 이메일 검색, 스레드 읽기 |
+| Notion | issue-tracker, work-log | Notion 페이지에 보고서 작성 |
+| Jira | work-log | 이슈 트래킹 데이터 |
+| Google Calendar | work-log | 미팅/일정 데이터 |
 
 ## Skills
 
@@ -81,16 +64,18 @@ GitHub, Slack, Jira, Google Calendar, Notion에서 활동을 수집해서 업무
 
 ```
 moonkit/
-  install.sh                # Skill installer (symlinks to .claude/skills/)
+  .claude-plugin/
+    plugin.json               # Plugin manifest
+    marketplace.json          # Marketplace registry
   skills/
     issue-tracker/
-      SKILL.md              # Skill definition
-      README.md             # Documentation
-      references/           # Templates
+      SKILL.md                # Skill definition
+      README.md               # Documentation
+      references/             # Templates
     work-log/
-      SKILL.md              # Skill definition
-      README.md             # Documentation
-      references/           # Templates
+      SKILL.md                # Skill definition
+      README.md               # Documentation
+      references/             # Templates
 ```
 
 ## License

@@ -1,0 +1,8 @@
+{
+  "name": "moonkit",
+  "description": "Work automation skills — issue tracking and work logging for teams using Slack, Gmail, Jira, and Notion",
+  "version": "0.2.0",
+  "author": {
+    "name": "Sooyoung Moon"
+  }
+}
