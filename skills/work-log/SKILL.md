@@ -20,6 +20,21 @@ allowed-tools:
   - AskUserQuestion
 ---
 
+**Preamble — run this FIRST before any skill logic:**
+
+```bash
+# Find moonkit root via symlink resolution
+_MK_DIR=$(cd "$(dirname "$(readlink ~/.claude/skills/work-log 2>/dev/null || readlink .claude/skills/work-log 2>/dev/null || echo .)")/.." 2>/dev/null && pwd) || true
+[ -n "$_MK_DIR" ] && _UPD=$("$_MK_DIR/bin/moonkit-update-check" 2>/dev/null || true) && [ -n "$_UPD" ] && echo "$_UPD"
+```
+
+If the output shows `UPGRADE_AVAILABLE <old> <new>`:
+1. Tell the user: "moonkit v{new} 버전이 있습니다. (현재 v{old}) 업데이트할까요?"
+2. If yes → run `$_MK_DIR/bin/moonkit-upgrade`
+3. If no → continue. To snooze 24h: `echo $(( $(date +%s) + 86400 )) > ~/.moonkit/update-snooze`
+
+If preamble produces no output, proceed normally.
+
 # /work-log — Work Journal, Impact Report & Achievement Organizer
 
 Three modes in one skill:

@@ -1,0 +1,67 @@
+#!/bin/bash
+# moonkit-update-check — checks if a newer version is available on GitHub.
+# Called from skill preambles. Outputs nothing if up-to-date.
+# Outputs "UPGRADE_AVAILABLE <local> <remote>" if update found.
+
+set -euo pipefail
+
+# Find moonkit root (this script lives in bin/)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+MOONKIT_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Cache config
+CACHE_DIR="${HOME}/.moonkit"
+CACHE_FILE="${CACHE_DIR}/update-check-cache"
+SNOOZE_FILE="${CACHE_DIR}/update-snooze"
+CACHE_TTL=3600        # 60 minutes between checks
+SNOOZE_TTL=86400      # 24 hours snooze
+
+mkdir -p "$CACHE_DIR"
+
+# Check snooze
+if [[ -f "$SNOOZE_FILE" ]]; then
+    snooze_until=$(cat "$SNOOZE_FILE" 2>/dev/null || echo "0")
+    now=$(date +%s)
+    if (( now < snooze_until )); then
+        exit 0
+    fi
+    rm -f "$SNOOZE_FILE"
+fi
+
+# Check cache
+if [[ -f "$CACHE_FILE" ]]; then
+    cache_age=$(( $(date +%s) - $(stat -f%m "$CACHE_FILE" 2>/dev/null || stat -c%Y "$CACHE_FILE" 2>/dev/null || echo "0") ))
+    if (( cache_age < CACHE_TTL )); then
+        cat "$CACHE_FILE"
+        exit 0
+    fi
+fi
+
+# Read local version
+LOCAL_VER=""
+if [[ -f "$MOONKIT_DIR/VERSION" ]]; then
+    LOCAL_VER=$(cat "$MOONKIT_DIR/VERSION" | tr -d '[:space:]')
+fi
+
+if [[ -z "$LOCAL_VER" ]]; then
+    exit 0
+fi
+
+# Fetch remote version (5s timeout, silent)
+REMOTE_VER=$(curl -sf --max-time 5 \
+    "https://raw.githubusercontent.com/symoon94/moonkit/main/VERSION" 2>/dev/null \
+    | tr -d '[:space:]' || true)
+
+# Validate remote version (should look like x.y.z)
+if [[ ! "$REMOTE_VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo -n "" > "$CACHE_FILE"
+    exit 0
+fi
+
+# Compare
+if [[ "$LOCAL_VER" != "$REMOTE_VER" ]]; then
+    echo "UPGRADE_AVAILABLE $LOCAL_VER $REMOTE_VER" > "$CACHE_FILE"
+    cat "$CACHE_FILE"
+else
+    echo -n "" > "$CACHE_FILE"
+fi

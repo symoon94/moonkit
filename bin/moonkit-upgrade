@@ -1,0 +1,23 @@
+#!/bin/bash
+# moonkit-upgrade — pulls latest version from GitHub.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+MOONKIT_DIR="$(dirname "$SCRIPT_DIR")"
+
+cd "$MOONKIT_DIR"
+
+if [[ ! -d ".git" ]]; then
+    echo "ERROR: moonkit is not a git repo. Re-clone from https://github.com/symoon94/moonkit.git"
+    exit 1
+fi
+
+echo "Updating moonkit..."
+git pull --ff-only origin main 2>&1
+
+NEW_VER=$(cat VERSION | tr -d '[:space:]')
+echo "Updated to v${NEW_VER}"
+
+# Clear update cache
+rm -f "${HOME}/.moonkit/update-check-cache"

@@ -36,6 +36,21 @@ allowed-tools:
   - mcp__claude_ai_Notion__notion-get-teams
 ---
 
+**Preamble — run this FIRST before any skill logic:**
+
+```bash
+# Find moonkit root via symlink resolution
+_MK_DIR=$(cd "$(dirname "$(readlink ~/.claude/skills/issue-tracker 2>/dev/null || readlink .claude/skills/issue-tracker 2>/dev/null || echo .)")/.." 2>/dev/null && pwd) || true
+[ -n "$_MK_DIR" ] && _UPD=$("$_MK_DIR/bin/moonkit-update-check" 2>/dev/null || true) && [ -n "$_UPD" ] && echo "$_UPD"
+```
+
+If the output shows `UPGRADE_AVAILABLE <old> <new>`:
+1. Tell the user: "moonkit v{new} 버전이 있습니다. (현재 v{old}) 업데이트할까요?"
+2. If yes → run `$_MK_DIR/bin/moonkit-upgrade`
+3. If no → continue. To snooze 24h: `echo $(( $(date +%s) + 86400 )) > ~/.moonkit/update-snooze`
+
+If preamble produces no output, proceed normally.
+
 # /issue-tracker — 팀 이슈 집계 보고서
 
 Slack과 Gmail에서 팀의 실수·요청·장애를 수집하고, 임팩트가 큰 문제부터
