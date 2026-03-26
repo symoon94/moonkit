@@ -47,9 +47,10 @@ Slack과 Gmail에서 팀의 실수·요청·장애를 수집하고, 임팩트가
 
 ## Arguments
 
-- `/issue-tracker` — 이번 달 (1일~오늘)
-- `/issue-tracker last` — 지난 달
+- `/issue-tracker` — 설정된 주기에 따른 기본 기간 (주간이면 이번 주, 월간이면 이번 달)
+- `/issue-tracker last` — 직전 주기 (주간이면 지난 주, 월간이면 지난 달)
 - `/issue-tracker 2026-01` — 특정 월
+- `/issue-tracker 2026-03-10 2026-03-24` — 커스텀 기간
 - `/issue-tracker Q1` — 분기
 - `/issue-tracker setup` — 셋업 강제 재실행
 
@@ -166,9 +167,24 @@ options:
     description: "필터 없이 전부 수집합니다"
 ```
 
-### Setup Call 3: 출력 설정 (AskUserQuestion, 1~2문항)
+### Setup Call 3: 주기 및 출력 설정 (AskUserQuestion, 2~3문항)
 
-**Q7. 출력 포맷**
+**Q7. 수집 주기**
+```
+question: "이슈를 얼마나 자주 집계할까요? 이 주기가 기본 기간으로 사용됩니다."
+header: "수집 주기"
+options:
+  - label: "주간 (Recommended)"
+    description: "매주 월~일 단위로 집계. 이슈를 빠르게 잡고 싶을 때."
+  - label: "격주"
+    description: "2주 단위로 집계. 스프린트와 맞출 때 좋음."
+  - label: "월간"
+    description: "매월 1일~말일 단위로 집계. 정기 리포트용."
+  - label: "분기"
+    description: "Q1~Q4 단위로 집계. 전략적 이슈 파악용."
+```
+
+**Q8. 출력 포맷**
 ```
 question: "보고서를 어떤 형식으로 받을까요? (복수 선택 가능)"
 header: "출력 포맷"
@@ -183,7 +199,7 @@ options:
 ```
 > DOCX가 필요하면 "Other"로 입력 가능
 
-**Q8. Notion 페이지** (Notion 선택 시에만)
+**Q9. Notion 페이지** (Notion 선택 시에만)
 ```
 question: "보고서를 작성할 Notion 페이지 URL을 붙여넣어 주세요."
 header: "Notion 페이지"
@@ -227,6 +243,7 @@ gmail:
 exclusions:
   - SaaS
   - console 장애
+frequency: weekly           # weekly | biweekly | monthly | quarterly
 output:
   formats:                   # 복수 선택 가능
     - html
@@ -254,6 +271,7 @@ SETUP = {
   slack_channels: [],
   gmail_filter: { type: "sender"|"label"|"keyword", value: "..." },
   exclusions: ["SaaS", "console 장애"],
+  frequency: "weekly" | "biweekly" | "monthly" | "quarterly",
   output_formats: ["html", "markdown", "notion"],
   notion_page: "https://notion.so/...",
 }
@@ -263,18 +281,36 @@ SETUP = {
 
 ## Phase 1: 기간 계산
 
+**명시적 기간 지정 시** (arguments에 날짜/월/분기가 있으면):
+- `2026-01` → 해당 월 1일 ~ 말일
+- `2026-03-10 2026-03-24` → 커스텀 기간 그대로 사용
+- `Q1`~`Q4` → 분기 경계
+
+**`last` 또는 인자 없이 호출 시** → `SETUP.frequency`에 따라 기간을 계산:
+
+| frequency | `/issue-tracker` (현재 기간) | `/issue-tracker last` (직전 기간) |
+|-----------|------------------------------|-----------------------------------|
+| **weekly** | 이번 주 월요일 ~ 오늘 | 지난 주 월~일 |
+| **biweekly** | 이번 격주 시작일 ~ 오늘 | 직전 2주 |
+| **monthly** | 이번 달 1일 ~ 오늘 | 지난 달 1일 ~ 말일 |
+| **quarterly** | 이번 분기 시작일 ~ 오늘 | 직전 분기 |
+
 ```bash
+# 예: monthly (기본값)
 YEAR=$(date +%Y)
 MONTH=$(date +%m)
 PERIOD_START="${YEAR}-${MONTH}-01"
 PERIOD_END=$(date +%Y-%m-%d)
 PERIOD_LABEL="${YEAR}년 ${MONTH}월"
+
+# 예: weekly
+DOW=$(date +%u)  # 1=월 ~ 7=일
+PERIOD_START=$(date -v-$((DOW-1))d +%Y-%m-%d)  # 이번 주 월요일
+PERIOD_END=$(date +%Y-%m-%d)
+PERIOD_LABEL="$(date -v-$((DOW-1))d +%m/%d) ~ $(date +%m/%d)"
 ```
 
-Arguments에 따라 조정:
-- `last` → 전월 1일 ~ 전월 말일
-- `2026-01` → 해당 월 1일 ~ 말일
-- `Q1`~`Q4` → 분기 경계
+frequency가 설정되지 않았으면 **monthly**를 기본값으로 사용한다.
 
 ---
 
@@ -631,8 +667,8 @@ Git 이력 관리나 PR에 첨부하기 좋은 포맷.
 
 | 포맷 | 파일/위치 |
 |------|----------|
-| HTML | `{OUTPUT_DIR}/issue-tracker-{YEAR}-{MONTH}.html` |
-| Markdown | `{OUTPUT_DIR}/issue-tracker-{YEAR}-{MONTH}.md` |
+| HTML | `{OUTPUT_DIR}/issue-tracker-{PERIOD_START}--{PERIOD_END}.html` |
+| Markdown | `{OUTPUT_DIR}/issue-tracker-{PERIOD_START}--{PERIOD_END}.md` |
 | Notion | 지정된 Notion 페이지 (URL 출력) |
 
 ---
