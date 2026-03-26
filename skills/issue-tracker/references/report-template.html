@@ -409,9 +409,17 @@
 </div>
 
 <script>
-// __DATA_START__
-const DATA = [];
-// __DATA_END__
+// ========== DATA: /issue-tracker 스킬이 수집 후 자동 주입 ==========
+const DATA = [
+  // {
+  //   issue: "이슈 제목",
+  //   severity: "상|중|하",
+  //   scopes: ["우리팀", ...],
+  //   freq: 숫자,
+  //   source: "slack|gmail|both",
+  //   links: [{ type: "slack", url: "...", text: "3/5 — 메시지" }]
+  // }
+];
 const REPORT_META = {
   team: "",        // 팀명
   period: "",      // "2026년 03월"
@@ -684,19 +692,16 @@ document.getElementById("scopeFilter").addEventListener("change", render);
 // ── Export cleaned HTML ──
 
 function exportClean() {
-  // Clone current document with only activeData (dismissed items excluded)
+  // Clone current document, remove dismissed, remove JS interactivity
   const html = document.documentElement.cloneNode(true);
+  // Update DATA in the clone to only activeData
   const scriptTag = html.querySelector("script");
   if (scriptTag) {
-    const src = scriptTag.textContent;
-    const startMarker = "// __DATA_START__";
-    const endMarker = "// __DATA_END__";
-    const startIdx = src.indexOf(startMarker);
-    const endIdx = src.indexOf(endMarker);
-    if (startIdx !== -1 && endIdx !== -1) {
-      const cleanData = JSON.stringify(activeData, null, 2);
-      scriptTag.textContent = src.slice(0, startIdx) + startMarker + "\nconst DATA = " + cleanData + ";\n" + src.slice(endIdx);
-    }
+    const cleanData = JSON.stringify(activeData, null, 2);
+    scriptTag.textContent = scriptTag.textContent.replace(
+      /const DATA = \[[\s\S]*?\];/,
+      `const DATA = ${cleanData};`
+    );
   }
   const blob = new Blob(["<!DOCTYPE html>\n" + html.outerHTML], { type: "text/html" });
   const url = URL.createObjectURL(blob);
