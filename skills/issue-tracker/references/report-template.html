@@ -692,16 +692,29 @@ document.getElementById("scopeFilter").addEventListener("change", render);
 // ── Export cleaned HTML ──
 
 function exportClean() {
-  // Clone current document, remove dismissed, remove JS interactivity
+  // Clone current document with only activeData (dismissed items excluded)
   const html = document.documentElement.cloneNode(true);
-  // Update DATA in the clone to only activeData
   const scriptTag = html.querySelector("script");
   if (scriptTag) {
     const cleanData = JSON.stringify(activeData, null, 2);
-    scriptTag.textContent = scriptTag.textContent.replace(
-      /const DATA = \[[\s\S]*?\];/,
-      `const DATA = ${cleanData};`
-    );
+    const src = scriptTag.textContent;
+    const startMarker = "const DATA = [";
+    const startIdx = src.indexOf(startMarker);
+    if (startIdx !== -1) {
+      // Find the matching closing ]; by counting bracket depth
+      let depth = 0;
+      let endIdx = -1;
+      for (let i = startIdx + startMarker.length - 1; i < src.length; i++) {
+        if (src[i] === "[") depth++;
+        else if (src[i] === "]") { depth--; if (depth === 0) { endIdx = i; break; } }
+      }
+      if (endIdx !== -1) {
+        // Find the semicolon after the closing bracket
+        const semi = src.indexOf(";", endIdx);
+        const cutEnd = semi !== -1 ? semi + 1 : endIdx + 1;
+        scriptTag.textContent = src.slice(0, startIdx) + "const DATA = " + cleanData + ";" + src.slice(cutEnd);
+      }
+    }
   }
   const blob = new Blob(["<!DOCTYPE html>\n" + html.outerHTML], { type: "text/html" });
   const url = URL.createObjectURL(blob);
