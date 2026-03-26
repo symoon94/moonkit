@@ -1,0 +1,55 @@
+# work-log configuration
+# Copy to ~/.work-log/config.yaml and customize
+#
+# Minimal setup: just set language, output_dir, and enable/disable sources.
+# Everything else (username, user_id, repos, etc.) is auto-detected at runtime.
+
+# Output language: ko (Korean) or en (English)
+language: ko
+
+# Where to save journals, impact reports, organize outputs, brag doc, and snapshots
+output_dir: ~/work-log
+
+# Path to your resume file (supports .md and .tex/Overleaf format)
+resume_path: ~/resume.md
+
+# --- Data Sources ---
+# Set enabled: true/false to toggle each source.
+# All other fields are OPTIONAL — leave them out for auto-discovery.
+
+github:
+  enabled: true
+  # repos_include: ["owner/repo"]   # Only collect from these repos (empty = auto-discover)
+  # repos_exclude: ["owner/fork"]   # Exclude specific repos
+
+slack:
+  enabled: true
+  # channels_include: ["general", "engineering"]  # Only these channels (empty = all)
+  # channels_exclude: ["random", "social"]        # Exclude these channels
+
+jira:
+  enabled: false
+  # method: mcp                     # "mcp" (default) or "rest" (direct API)
+  # base_url: "https://yourcompany.atlassian.net"  # Required for REST method
+  # projects_include: ["PROJ"]      # Only these Jira projects
+  # projects_exclude: []            # Exclude specific projects
+
+google_calendar:
+  enabled: true
+  # calendar_ids: ["primary"]       # Which calendars (default: primary)
+  # include_declined: false         # Include declined events?
+
+notion:
+  enabled: true
+  # workspace_filter: ""            # Limit to specific page/database ID
+
+# --- Organize Mode ---
+# Settings for /work-log organize (report / resume submodes)
+organize:
+  report_top_n: 5                    # Number of top achievements in report mode
+  # resume_latex_macro: "\item"      # LaTeX bullet macro (auto-detect if omitted)
+  schedule:
+    enabled: false                   # Enable scheduled organize runs
+    cron: "0 10 * * 6"             # Cron expression (default: Saturday 10 AM)
+    submode: report                  # Which submode to run (report / resume)
+    period: last                     # Time period (last = previous week)

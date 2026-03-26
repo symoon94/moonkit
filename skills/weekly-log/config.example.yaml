@@ -1,0 +1,44 @@
+# weekly-log configuration
+# Copy to ~/.weekly-log/config.yaml and customize
+#
+# Minimal setup: just set language, output_dir, and enable/disable sources.
+# Everything else (username, user_id, repos, etc.) is auto-detected at runtime.
+
+# Output language: ko (Korean) or en (English)
+language: ko
+
+# Where to save journals, brag doc, and snapshots
+output_dir: ~/weekly-log
+
+# Path to your resume file (supports .md and .tex/Overleaf format)
+resume_path: ~/resume.md
+
+# --- Data Sources ---
+# Set enabled: true/false to toggle each source.
+# All other fields are OPTIONAL — leave them out for auto-discovery.
+
+github:
+  enabled: true
+  # repos_include: ["owner/repo"]   # Only collect from these repos (empty = auto-discover all active repos)
+  # repos_exclude: ["owner/fork"]   # Exclude specific repos from collection
+
+slack:
+  enabled: true
+  # channels_include: ["general", "engineering"]  # Only these channels (empty = search all)
+  # channels_exclude: ["random", "social"]        # Exclude these channels
+
+jira:
+  enabled: false
+  # method: mcp                     # "mcp" (default, tries Atlassian MCP first) or "rest" (direct API)
+  # base_url: "https://yourcompany.atlassian.net"  # Required for REST method
+  # projects_include: ["PROJ"]      # Only these Jira projects (empty = all projects)
+  # projects_exclude: []            # Exclude specific projects
+
+google_calendar:
+  enabled: true
+  # calendar_ids: ["primary"]       # Which calendars to check (default: primary)
+  # include_declined: false         # Include events you declined?
+
+notion:
+  enabled: true
+  # workspace_filter: ""            # Limit to specific page/database ID (empty = entire workspace)
