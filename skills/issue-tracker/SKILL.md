@@ -47,8 +47,8 @@ Slack과 Gmail에서 팀의 실수·요청·장애를 수집하고, 임팩트가
 
 ## Arguments
 
-- `/issue-tracker` — 설정된 주기에 따른 기본 기간 (주간이면 이번 주, 월간이면 이번 달)
-- `/issue-tracker last` — 직전 주기 (주간이면 지난 주, 월간이면 지난 달)
+- `/issue-tracker` — 설정된 기본 기간으로 집계 (주간이면 이번 주, 월간이면 이번 달)
+- `/issue-tracker last` — 직전 기간 (주간이면 지난 주, 월간이면 지난 달)
 - `/issue-tracker 2026-01` — 특정 월
 - `/issue-tracker 2026-03-10 2026-03-24` — 커스텀 기간
 - `/issue-tracker Q1` — 분기
@@ -99,7 +99,7 @@ options:
 
 **Q2. 팀 소개**
 ```
-question: "어떤 팀인지, 주로 어떤 일을 하는지 한 줄로 알려주세요. (예: '솔라박스팀, 온프렘 에너지 솔루션 개발/운영')"
+question: "어떤 팀인지, 주로 어떤 일을 하는지 한 줄로 알려주세요. (예: '플랫폼팀, 백엔드 인프라 개발/운영')"
 header: "팀 소개"
 options:
   - label: "직접 입력"
@@ -108,7 +108,7 @@ options:
     description: "팀 맥락 없이 범용으로 수집합니다"
 ```
 > 이 답변은 제외 필터와 영향 범위 auto 추출의 맥락으로 사용된다.
-> 예: "온프렘 팀"이라고 하면 SaaS 관련 이슈는 자동 제외 후보가 된다.
+> 예: "백엔드 팀"이라고 하면 프론트엔드 전용 이슈는 자동 제외 후보가 된다.
 
 **Q3. 영향 범위 설정**
 ```
@@ -131,7 +131,7 @@ question: "Slack에서 이슈를 식별하는 특별한 시그널이 있나요?"
 header: "Slack 시그널"
 options:
   - label: "특정 이모지"
-    description: "예: :solarbox-issue: 같은 커스텀 이모지가 달린 메시지만 수집"
+    description: "예: :team-issue: 같은 커스텀 이모지가 달린 메시지만 수집"
   - label: "키워드 패턴"
     description: "이슈성 키워드('장애', '오류', '요청' 등)가 포함된 메시지를 수집"
   - label: "이모지 + 키워드 둘 다"
@@ -139,7 +139,7 @@ options:
   - label: "전체 스캔"
     description: "필터 없이 관련 채널 전체를 읽고 이슈성 메시지를 판별"
 ```
-> "특정 이모지" 선택 시 → "Other"로 이모지 이름 입력받음 (예: `:solarbox-issue:`)
+> "특정 이모지" 선택 시 → "Other"로 이모지 이름 입력받음 (예: `:team-issue:`)
 > "키워드 패턴" 선택 시 → 기본 패턴 사용 (아래 Phase 1 참조), 사용자가 추가 가능
 
 **Q5. Gmail 필터** (Gmail 선택 시에만)
@@ -158,7 +158,7 @@ options:
 
 **Q6. 제외 조건**
 ```
-question: "수집에서 제외할 것이 있나요? (예: 'SaaS 관련 이슈는 우리팀과 무관', '특정 채널은 제외')"
+question: "수집에서 제외할 것이 있나요? (예: '특정 주제는 우리팀과 무관', '특정 채널은 제외')"
 header: "제외 조건"
 options:
   - label: "있음 — 직접 입력"
@@ -167,21 +167,21 @@ options:
     description: "필터 없이 전부 수집합니다"
 ```
 
-### Setup Call 3: 주기 및 출력 설정 (AskUserQuestion, 2~3문항)
+### Setup Call 3: 기본 기간 및 출력 설정 (AskUserQuestion, 2~3문항)
 
-**Q7. 수집 주기**
+**Q7. 기본 집계 기간**
 ```
-question: "이슈를 얼마나 자주 집계할까요? 이 주기가 기본 기간으로 사용됩니다."
-header: "수집 주기"
+question: "/issue-tracker 실행 시 기본으로 볼 기간을 어떻게 잡을까요?"
+header: "집계 기간"
 options:
   - label: "주간 (Recommended)"
-    description: "매주 월~일 단위로 집계. 이슈를 빠르게 잡고 싶을 때."
+    description: "이번 주 월~일 범위를 기본으로 봅니다"
   - label: "격주"
-    description: "2주 단위로 집계. 스프린트와 맞출 때 좋음."
+    description: "최근 2주 범위를 기본으로 봅니다"
   - label: "월간"
-    description: "매월 1일~말일 단위로 집계. 정기 리포트용."
+    description: "이번 달 1일~오늘 범위를 기본으로 봅니다"
   - label: "분기"
-    description: "Q1~Q4 단위로 집계. 전략적 이슈 파악용."
+    description: "이번 분기 범위를 기본으로 봅니다"
 ```
 
 **Q8. 출력 포맷**
@@ -223,27 +223,27 @@ mkdir -p "$HOME/.issue-tracker"
 
 ```yaml
 # ~/.issue-tracker/config.yaml
-team: "솔라박스팀, 온프렘 에너지 솔루션"
+team: "플랫폼팀, 백엔드 인프라 개발/운영"
 sources:
   - slack
   - gmail
 scope_mode: auto           # auto | manual | auto_confirm
 scope_list:                # manual / auto_confirm일 때
   - 우리팀
-  - EBS팀
+  - 인프라팀
   - 파트너사
   - 고객사
 slack:
   signal: emoji             # emoji | keyword | both | full_scan
-  emoji: ":solarbox-issue:"
+  emoji: ":team-issue:"
   channels: []              # full_scan일 때 사용
 gmail:
   filter_type: sender       # sender | label | keyword
   filter_value: "@partner.com"
 exclusions:
-  - SaaS
-  - console 장애
-frequency: weekly           # weekly | biweekly | monthly | quarterly
+  - 마케팅 캠페인
+  - 사내 공지
+frequency: weekly           # weekly | biweekly | monthly | quarterly — 인자 없이 실행 시 기본 기간
 output:
   formats:                   # 복수 선택 가능
     - html
@@ -263,15 +263,15 @@ output:
 ```
 SETUP = {
   sources: ["slack", "gmail"],
-  team: "솔라박스팀, 온프렘 에너지 솔루션",
+  team: "플랫폼팀, 백엔드 인프라 개발/운영",
   scope_mode: "auto" | "manual" | "auto_confirm",
   scope_list: [...],
   slack_signal: "emoji" | "keyword" | "both" | "full_scan",
-  slack_emoji: ":solarbox-issue:",
+  slack_emoji: ":team-issue:",
   slack_channels: [],
   gmail_filter: { type: "sender"|"label"|"keyword", value: "..." },
-  exclusions: ["SaaS", "console 장애"],
-  frequency: "weekly" | "biweekly" | "monthly" | "quarterly",
+  exclusions: ["마케팅 캠페인", "사내 공지"],
+  frequency: "weekly" | "biweekly" | "monthly" | "quarterly",  // 인자 없이 실행 시 기본 기간
   output_formats: ["html", "markdown", "notion"],
   notion_page: "https://notion.so/...",
 }
@@ -286,7 +286,7 @@ SETUP = {
 - `2026-03-10 2026-03-24` → 커스텀 기간 그대로 사용
 - `Q1`~`Q4` → 분기 경계
 
-**`last` 또는 인자 없이 호출 시** → `SETUP.frequency`에 따라 기간을 계산:
+**`last` 또는 인자 없이 호출 시** → `SETUP.frequency`(기본 집계 기간)에 따라 기간을 계산:
 
 | frequency | `/issue-tracker` (현재 기간) | `/issue-tracker last` (직전 기간) |
 |-----------|------------------------------|-----------------------------------|
@@ -365,12 +365,10 @@ query: "(또 OR 매번 OR 반복 OR 왜 항상) after:{PERIOD_START}"
 - 재발 여부 ("또 발생", "이번에도", "다시")
 - 영향 받은 팀/조직 언급
 - 해결 여부 ("해결됨", "완료", "fixed", "closed")
-- **permalink 수집** — 각 메시지의 Slack 링크를 저장 (보고서에 첨부용)
-
 **제외 필터 적용**:
 `SETUP.exclusions`에 포함된 키워드가 메시지에 있으면 해당 메시지를 제외한다.
-팀 맥락도 활용 — 예: 팀 소개에 "온프렘"이 있고 제외에 "SaaS"가 있으면,
-"SaaS Console 장애" 같은 메시지는 자동 제외.
+팀 맥락도 활용 — 예: 팀 소개에 "백엔드"가 있고 제외에 "프론트엔드"가 있으면,
+프론트엔드 전용 이슈는 자동 제외.
 
 ### 2b. Gmail 수집
 
@@ -462,8 +460,7 @@ options:
 2. 유사한 이슈를 그룹핑 (예: "토큰 만료" + "인증 실패" → 같은 그룹)
 3. 그룹당 발생 건수를 카운트
 4. 같은 날 같은 사람의 중복 언급도 별도 건수로 카운트
-5. 각 그룹에 원본 Slack permalink / Gmail 링크를 모아둔다
-6. **대표 메시지 1개를 선정한다** — 그룹 내에서 이슈를 가장 잘 설명하는 메시지의
+5. **대표 메시지 1개를 선정한다** — 그룹 내에서 이슈를 가장 잘 설명하는 메시지의
    원문 내용(snippet)을 저장. 보고서에서 이 이슈가 구체적으로 어떤 맥락인지
    바로 파악할 수 있게 하기 위함.
 
@@ -471,11 +468,6 @@ options:
 "기타"로 묶지 말고 **1건짜리 별개 이슈**로 등록한다.
 모든 수집된 이슈는 하나도 빠지지 않고 최종 테이블에 포함되어야 한다.
 그룹핑 후 전체 건수의 합이 수집된 원본 건수와 일치하는지 검증한다.
-
-### 3d. 소스 태깅
-
-각 이슈에 출처를 태깅한다: `slack` / `gmail` / `both`
-동일 이슈가 Slack과 Gmail 양쪽에서 발견되면 `both`로 태깅하고 빈도 합산.
 
 ---
 
@@ -511,16 +503,11 @@ const DATA = [
     severity: "상|중|하",
     scopes: ["우리팀", "EBS팀", ...],
     freq: 숫자,
-    source: "slack|gmail|both",
     firstSeen: "2026-03-05",
     lastSeen: "2026-03-25",
     resolved: false,
     snippet: "파트너 A 토큰이 또 만료돼서 데이터 싱크가 3시간 중단됨...",  // 대표 메시지 원문 (1개)
-    snippetLink: "https://team.slack.com/archives/...",                    // 대표 메시지 permalink
-    links: [
-      { type: "slack", url: "https://team.slack.com/archives/...", text: "3/5 — 원본 메시지" },
-      { type: "gmail", url: "https://mail.google.com/...", text: "3/8 — 관련 메일" }
-    ]
+    snippetLink: "https://team.slack.com/archives/..."                     // 대표 메시지 permalink
   },
   ...
 ];
@@ -547,7 +534,7 @@ const DATA = [
 |------|------|
 | # | 순위 |
 | 심각도 | 상/중/하 |
-| 이슈 | 한 줄 요약 + 링크 |
+| 이슈 | 한 줄 요약 + 대표 메시지 본문 |
 | 영향 범위 | 범위별 태그 |
 | 빈도 | 발생 건수 |
 | 점수 | 임팩트 점수 |
@@ -557,7 +544,6 @@ const DATA = [
 **5. 권장 액션 — TOP 3**: 임팩트 상위 3개 이슈별로:
 - 왜 임팩트가 큰지 (1~2문장)
 - 제안하는 다음 스텝 (1~2개)
-- Slack/Gmail 링크 예시 (2~3개)
 
 ---
 
@@ -652,7 +638,7 @@ Git 이력 관리나 PR에 첨부하기 좋은 포맷.
 **Notion 페이지 구조:**
 - 제목: `이슈 집계 — {SETUP.team} {PERIOD_LABEL}`
 - Executive Summary를 callout 블록으로
-- 이슈 목록을 테이블 블록으로 (심각도·영향 범위·빈도·점수)
+- 이슈 목록을 테이블 블록으로 (심각도·영향 범위·빈도·점수·소스)
 - 각 이슈에 Slack permalink를 인라인 링크로 첨부
 - 권장 액션을 toggle heading으로
 
