@@ -1,15 +1,14 @@
 ---
 name: work-log
-version: 0.3.0
+version: 0.9.0
 description: |
-  Work journal, impact report, and achievement organizer. Collects activity from
-  GitHub, Slack, Jira, Google Calendar, and Notion — generates structured journals,
-  performance impact reports, and organized achievement summaries for internal
-  reporting or resume preparation. Maintains a brag document and updates your resume.
-  Three modes: journal (chronological activity log), impact (capability-based
-  performance report), and organize (flexible categorization for reports/resume).
-  Trigger: "/work-log", "업무일지", "work log", "성과 보고", "impact report",
-  "이력서 업데이트", "resume update", "성과 정리", "뭐했지", "what did I do"
+  Work journal, performance report, and resume builder. Collects activity from
+  GitHub, Slack, Jira, Google Calendar, and Notion — generates structured outputs.
+  Three modes: journal (chronological activity log + insights), report (6 business-value
+  categories + impact tagging + TOP 5 + Executive Summary), resume (13 competency
+  perspectives + scoring + rewriting suggestions). Maintains a brag document.
+  Trigger: "/work-log", "업무일지", "work log", "성과 보고", "성과 정리",
+  "이력서 업데이트", "resume update", "뭐했지", "what did I do"
 allowed-tools:
   - Bash
   - Read
@@ -37,10 +36,10 @@ If preamble produces no output, proceed normally.
 
 # /work-log — Work Journal, Impact Report & Achievement Organizer
 
-Three modes in one skill:
-- **Journal mode** (default): Chronological activity log with insights
-- **Impact mode**: Performance report — categorize work by capability area, tag measurable outcomes
-- **Organize mode**: Flexible achievement categorization — internal reports (business-value categories) or resume preparation (engineer competency framework with scoring)
+Three modes:
+- **Journal mode**: Chronological activity log with insights
+- **Report mode**: Internal performance report — 6 business-value categories + impact tagging + TOP 5 + Executive Summary
+- **Resume mode**: Engineer competency framework — 13 perspectives, 1-10 scoring, rewriting suggestions
 
 ## User-invocable
 
@@ -48,28 +47,36 @@ When the user types `/work-log`, run this skill.
 
 ## Arguments
 
-- `/work-log` — this week's journal (Monday to today)
+- `/work-log` — interactive mode & period & source selection
 - `/work-log last` — previous full week journal
 - `/work-log 2026-01-01 2026-03-22` — custom date range journal
 - `/work-log Q1` — current year Q1 journal
 - `/work-log H1` — current year first half (Jan~Jun)
-- `/work-log impact` — this week's impact report
-- `/work-log impact Q1` — Q1 impact report
-- `/work-log impact 2025-10-01 2026-03-31` — custom range impact report
-- `/work-log organize` — this week, choose categorization method interactively
-- `/work-log organize report` — internal performance report (business-value categories)
-- `/work-log organize resume` — resume preparation (engineer competency framework)
-- `/work-log organize report Q1` — Q1 internal report
-- `/work-log organize resume H1` — H1 resume summary
+- `/work-log report` — this week's performance report
+- `/work-log report Q1` — Q1 performance report
+- `/work-log report 2025-07-01 2025-12-31` — custom range report
+- `/work-log resume` — this week's resume preparation
+- `/work-log resume H1` — H1 resume summary
 - `/work-log setup` — re-run first-time setup wizard
+
+### HTML output flag
+
+Append `--html` to any command to also generate a styled HTML version:
+- `/work-log report Q1 --html`
+- `/work-log resume H1 --html`
+- `/work-log --html` (interactive mode — asks as usual, HTML output included)
 
 ## Mode Detection
 
 Parse `$ARGUMENTS` to determine:
-1. **Mode**: If arguments contain `organize` → organize mode. If `impact` → impact mode. Otherwise → journal mode.
-2. **Organize submode** (organize mode only): First token after `organize` that matches `report` or `resume` → that submode. If first token is a period format (Q1, last, YYYY-MM-DD) → no submode specified, period detected. If no recognized token → AskUserQuestion in interactive mode, default to `report` in automated mode.
-3. **Execution**: If user typed in conversation → **interactive**. If scheduled task → **automated**.
-4. **Period**: Parse date range, `last`, `Q1-Q4`, `H1`/`H2`, or default to current week. Reuse existing Phase 0 parsing logic.
+1. **Mode**: Parse in this order:
+   - `report` (anywhere in args) → report mode
+   - `resume` (anywhere in args) → resume mode
+   - Period token only (e.g., `Q1`, `last`, dates) → journal mode
+   - **Empty arguments** (interactive mode) → AskUserQuestion with 3 modes (see Phase 0 Step 2.5). Do NOT silently default.
+2. **Execution**: If user typed in conversation → **interactive**. If scheduled task → **automated**.
+3. **Period**: Parse date range, `last`, `Q1-Q4`, `H1`/`H2` from arguments. **If no period argument is provided**, ask interactively (see Phase 0 Step 3). Do NOT silently default to current week.
+4. **HTML output**: If `--html` is present in args, set `html_output = true`. Also check `html_output` in config. The flag overrides config (flag present = true). In interactive mode, ask via Question 4 in Step 2.5.
 
 ---
 
@@ -101,19 +108,87 @@ Use AskUserQuestion calls:
 
 Generate `~/.work-log/config.yaml` using the skill's `config.example.yaml` as template.
 
+### Step 2.5: Interactive mode & period selection (when arguments are empty)
+
+**Only runs when `$ARGUMENTS` is empty AND interactive mode.**
+
+Use a single AskUserQuestion call with up to 4 questions to collect mode, period, sources, and organize submode at once:
+
+**Question 1 — Mode:**
+- Question: "어떤 용도로 생성할까요?"
+- Options:
+  - "업무일지 (Journal)" — 시간순 활동 기록 + 인사이트 (Recommended)
+  - "성과 보고 (Report)" — 경영진 시각의 6개 카테고리 + 임팩트 태깅 + TOP 5 + Executive Summary
+  - "이력서 정리 (Resume)" — 엔지니어 역량 프레임워크 13개 관점 + 1-10 스코어링 + 리라이팅 제안
+
+**Question 2 — Period:**
+- Question: "기간을 선택하세요"
+- Options (show up to 4, prioritize by relevance):
+  - "이번 주 (월요일 ~ 오늘)"
+  - "지난주 (월 ~ 일)"
+  - "이번 달" / "지난달"
+  - "Q1 (1~3월)" / "Q2 (4~6월)" / etc. — show only the current and previous quarter
+  - "H1 (1~6월)" / "H2 (7~12월)" — show only the current and previous half
+- AskUserQuestion allows max 4 options, so pick the most relevant 4 based on the current date. Always include "이번 주" and at least one long-range option (Q or H). The user can always select "Other" for custom dates (YYYY-MM-DD ~ YYYY-MM-DD).
+- If user selects "Other": ask a follow-up for custom dates, including the target year if it differs from the current year (e.g., "2025-07-01 ~ 2025-12-31").
+
+**Question 3 — Sources:**
+- Question: "어떤 소스를 사용할까요?"
+- multiSelect: true
+- Options: Show only the sources that are `enabled: true` in config, pre-labeled with checkmarks. For example if all 5 are enabled:
+  - "GitHub" — 커밋, PR, 코드 리뷰
+  - "Slack" — 채널별 대화 토픽
+  - "Jira" — 티켓 상태, 에픽
+  - "Google Calendar" — 미팅, 주최 여부
+  - "Notion" — 페이지 생성/편집 이력
+- If user deselects a source, skip that source in Phase 1 data collection. This lets users exclude noisy or irrelevant sources per run without changing config.
+
+**Question 4 — HTML output:**
+- Question: "HTML 파일도 함께 생성할까요?"
+- Options:
+  - "Markdown만 (Recommended)" — .md 파일만 생성
+  - "Markdown + HTML" — .md와 styled .html 파일 모두 생성
+- If `html_output: true` in config, default to "Markdown + HTML".
+- If `--html` flag was passed in arguments, skip this question and set html_output = true.
+
+**In automated mode** (scheduled task), skip this step — default to journal mode + current week + all enabled sources + config's `html_output` setting.
+
+### Step 2.7: Partial answer recovery (when AskUserQuestion is rejected)
+
+If AskUserQuestion is rejected but partial answers are visible in the rejection message:
+1. **Accept all clearly answered questions** — do not re-ask them.
+2. **Only re-ask unanswered questions** — either via a single follow-up AskUserQuestion or by inferring from context (e.g., if all other answers are clear, ask only the missing one).
+3. **Never ask "어떤 부분을 clarify 하고 싶으신가요?"** — the user didn't ask to clarify; the system reported a rejection. Proceed with what you have.
+4. If the user's text response after rejection provides the missing answer (e.g., "html 만들어줘"), accept it and proceed immediately.
+
 ### Step 3: Calculate date range
 
+**If a period argument was provided**, parse it directly:
+- Two dates (YYYY-MM-DD YYYY-MM-DD) → use directly
+- `last` → previous Monday to Sunday
+- `Q1`~`Q4` → quarter boundaries of current year
+- `H1` → Jan 1 ~ Jun 30, `H2` → Jul 1 ~ Dec 31
+
+**If NO period argument was provided** (interactive mode only), use AskUserQuestion to ask:
+- Question: "기간을 선택하세요"
+- Options:
+  - "이번 주 (월요일 ~ 오늘)" — calculate dynamically
+  - "지난주 (월 ~ 일)"
+  - "이번 달"
+  - "지난달"
+  - "Q1 (1~3월)" / "Q2 (4~6월)" / etc. — show only the current and previous quarter
+  - "H1 (1~6월)" / "H2 (7~12월)" — show only the current half
+  - "직접 입력 (YYYY-MM-DD ~ YYYY-MM-DD)"
+- If user selects "직접 입력": ask a follow-up AskUserQuestion for start and end dates.
+- If user selects "이번 달": start = first day of current month, end = today.
+- If user selects "지난달": start = first day of previous month, end = last day of previous month.
+
+**In automated mode** (scheduled task), default to current week without asking:
 ```bash
 DOW=$(date +%u)
 WEEK_START=$(date -v-$((DOW-1))d +%Y-%m-%d)  # macOS
 WEEK_END=$(date +%Y-%m-%d)
 ```
-
-Handle special arguments:
-- Two dates (YYYY-MM-DD YYYY-MM-DD) → use directly
-- `last` → previous Monday to Sunday
-- `Q1`~`Q4` → quarter boundaries of current year
-- `H1` → Jan 1 ~ Jun 30, `H2` → Jul 1 ~ Dec 31
 
 ### Step 4: Ensure output directories
 
@@ -125,6 +200,10 @@ mkdir -p "$OUTPUT_DIR/journals" "$OUTPUT_DIR/snapshots" "$OUTPUT_DIR/impact-repo
 ---
 
 ## Phase 1: Data Collection
+
+**IMPORTANT: Use parallel sub-agents for data collection.** Launch one Agent per enabled source (up to 5 agents: GitHub, Slack, Jira, Calendar, Notion) running in the background simultaneously. Each agent collects its source data and returns a structured summary. Wait for all agents to complete, then merge results for Phase 2.
+
+This dramatically reduces total collection time — especially for long periods where each source may take 30-60 seconds.
 
 Collect from each enabled source independently. If a source fails, log and continue.
 
@@ -142,22 +221,32 @@ If gaps exist, collect only for the missing date ranges.
 
 Use `gh` CLI. Auto-detect username via `gh api user --jq '.login'`.
 
+**For short periods (≤4 weeks)**: query the full range at once.
+
+**For long periods (>4 weeks)**: split into monthly sub-ranges to avoid GitHub Search API limits (100 commits, 50 PRs per query). For example, a 6-month range becomes 6 monthly queries. Aggregate and deduplicate results across all sub-ranges.
+
 For commit discovery, prefer `gh search commits` (works with private repos):
 ```bash
-gh search commits --author={username} --author-date=">={WEEK_START}" \
-  --json repository,sha,commit --limit 50
+# Short period:
+gh search commits --author={username} --author-date=">={START}" \
+  --json repository,sha,commit --limit 100
+# Long period (repeat per month):
+gh search commits --author={username} --author-date="{MONTH_START}..{MONTH_END}" \
+  --json repository,sha,commit --limit 100
 ```
 
 For PRs:
 ```bash
-gh search prs --author={username} --created=">={WEEK_START}" \
-  --json repository,title,number,state,url,createdAt --limit 20
+gh search prs --author={username} --created=">={START}" \
+  --json repository,title,number,state,url,createdAt --limit 50
+# Long period: use --created="{MONTH_START}..{MONTH_END}" per month
 ```
 
 For reviews:
 ```bash
-gh search prs --reviewed-by={username} --updated=">={WEEK_START}" \
-  --json repository,title,number,state,url --limit 20
+gh search prs --reviewed-by={username} --updated=">={START}" \
+  --json repository,title,number,state,url --limit 50
+# Long period: use --updated="{MONTH_START}..{MONTH_END}" per month
 ```
 
 Apply `repos_include` / `repos_exclude` filters from config.
@@ -186,8 +275,14 @@ Extract: title, time, duration, attendee count.
 
 ### 1e. Notion (if enabled)
 
-Use `notion-search` MCP with date filter. Extract: title, URL, edit time.
-Note: query must be non-empty (use a space or keyword if needed).
+Use `notion-search` MCP. Extract: title, URL, edit time.
+
+**API limitations to work around:**
+- `query` must be non-empty (use a space if no keyword).
+- Returns max 25 results per query, ranked by semantic relevance — NOT by date.
+- `created_date_range` filter applies to *creation date*, but the returned `timestamp` is *last edited time*. These can diverge significantly.
+- For comprehensive coverage, run multiple searches with different keywords relevant to the user's work (e.g., project names, "review", "design", "onboarding", product names). Deduplicate by page ID.
+- Post-filter results to keep only pages whose `last_edited_time` falls within the requested date range.
 
 ---
 
@@ -195,11 +290,11 @@ Note: query must be non-empty (use a space or keyword if needed).
 
 **Branch based on mode:**
 - Journal mode → Phase 2A (Journal)
-- Impact mode → Phase 2B (Impact Report)
-- Organize mode → Phase 2C (Organize)
+- Report mode → Phase 2B (Report)
+- Resume mode → Phase 2C (Resume)
 
-Journal and Impact modes still run Phase 3 (Brag Doc), Phase 4 (Resume), Phase 5 (Snapshot).
-Organize mode **skips** Phase 3 (Brag Doc) and Phase 4 (Resume), runs Phase 5 (Snapshot) and Phase 6 (Completion).
+Journal mode runs Phase 2H (HTML, if enabled), Phase 3 (Brag Doc), Phase 4 (Resume Update), Phase 5 (Snapshot).
+Report and Resume modes **skip** Phase 3 and Phase 4, run Phase 2H (HTML, if enabled), Phase 5 (Snapshot) and Phase 6 (Completion).
 
 ---
 
@@ -209,30 +304,20 @@ Generate chronological activity journal. Read `references/journal-template.md` f
 full template structure including the Insights section (Growth Metrics, Skill Radar,
 What to Improve, Strategic Direction, Owner's Scorecard).
 
-Save to: `{OUTPUT_DIR}/journals/{WEEK_END}.md`
+Save to: `{OUTPUT_DIR}/journals/{END}.md`
 
 ---
 
-## Phase 2B: Impact Report Generation
+## Phase 2B: Report Generation
 
-This is the core of the impact mode. Read `references/impact-template.md` for the full
-template and categorization rules.
+Read `references/report-template.md` for the full template structure, categorization rules,
+and auto-categorization signals.
 
-### Step 1: Categorize all collected work
+Take all collected data from Phase 1 and categorize each activity into one of 6 business-value
+categories: 매출/딜리버리, 운영 효율화, 장애 & 보안 리스크 감소, 비용 절감, 채용 & 홍보,
+팀 빌딩/리더십.
 
-Take every task (commit, PR, ticket, meeting, Slack thread, Notion page) and assign it
-to one of 4 capability areas:
-
-| 역량 영역 | 판별 기준 |
-|-----------|----------|
-| **기술/코드/설계** | 커밋, PR, 코드리뷰, 기술 관련 Slack 토픽, 기술 문서 |
-| **제품** | 고객/파트너 관련 PR, 제품 미팅, 제품 관련 Jira 티켓 |
-| **커뮤니케이션** | Slack 스레드 주도, 크로스팀 미팅, 데이터 공유 |
-| **문화** | 팀 미팅 주최, 북클럽, 온보딩, 멘토링, 사내 발표 |
-
-### Step 2: Tag impact metrics
-
-For each categorized task, attempt to find a measurable outcome from one of 5 impact types:
+Also tag each activity with impact metrics where possible:
 
 | 임팩트 태그 | 키워드/시그널 |
 |------------|-------------|
@@ -242,83 +327,17 @@ For each categorized task, attempt to find a measurable outcome from one of 5 im
 | 🛡 **리스크** | fix, security, bug, crash, validation, 장애, 보안, 수정 |
 | ✅ **품질** | test, refactor, clean, lint, 테스트, 리팩토링, 품질 |
 
-**Auto-tagging rules:**
-- PR/commit messages containing `fix`, `security`, `vulnerability` → 🛡 리스크
-- PR/commit messages containing `perf`, `optimize`, `reduce` → 💰 비용 or ⏱ 시간
-- PR/commit messages containing `feat` + customer/partner context → 💰 매출
-- `chore`, `ci`, `automation` → ⏱ 시간
-- `test`, `refactor` → ✅ 품질
-- Meeting where user was organizer → 문화 (no impact tag needed)
-- If impact is quantified in the commit message or PR (e.g., "reduced from 50s to 22s") → use that number directly
-
-### Step 3: Interactive impact filling (interactive mode only)
-
-For tasks where no impact metric was found automatically, present them to the user
-grouped by capability area using AskUserQuestion. For each untagged task:
-
-1. Show the task description
-2. Ask which impact tag applies (or "없음/측정 불가")
-3. Ask for a specific metric if available ("얼마나 변했나요?")
-
-Batch tasks into groups of 3-4 per AskUserQuestion call to avoid overwhelming the user.
-If the user selects "없음/측정 불가", accept and move on — not everything needs a number.
-
-### Step 4: Generate measurement suggestions
-
-For tasks tagged "없음/측정 불가" or where the user couldn't provide metrics, generate
-a concrete suggestion for how to measure impact in the future.
-
-Examples:
-- "이 자동화 파이프라인의 임팩트를 측정하려면: 도입 전/후 수동 작업 시간을 비교해보세요. `time` 커맨드로 파이프라인 실행 시간을 기록하면 됩니다."
-- "코드 리뷰 임팩트 측정: 리뷰 코멘트 중 실제 버그를 잡은 건수를 추적해보세요."
-- "미팅 효과 측정: 미팅 후 생성된 액션 아이템 수와 완료율을 노션에 기록해보세요."
-
-### Step 5: Save impact report
-
-Save to: `{OUTPUT_DIR}/impact-reports/{WEEK_END}.md`
-
-In automated mode, skip Step 3 (interactive filling) and mark untagged items as
-"⬜ 미측정" with measurement suggestions inline.
-
----
-
-## Phase 2C: Organize Generation
-
-Flexible achievement categorization. Two submodes: **report** (internal performance report)
-and **resume** (engineer competency framework).
-
-### Step 1: Submode selection
-
-If submode was not specified in arguments:
-- **Interactive mode**: Use AskUserQuestion:
-  - "성과를 어떤 방식으로 정리할까요?"
-  - A) 사내 성과 보고용 — 경영진 시각의 카테고리 (매출, 운영효율화, 리스크 등)
-  - B) 이력서용 — 엔지니어 역량 프레임워크 기반 (기술/제품/커뮤니케이션/문화)
-- **Automated mode**: Use config `organize.schedule.submode` (default: `report`)
-
-### Step 2: Ensure output directory
-
-```bash
-mkdir -p "$OUTPUT_DIR/organize"
-```
-
-### Step 3A: Report generation (`report` submode)
-
-Read `references/report-template.md` for the full template structure, categorization rules,
-and auto-categorization signals.
-
-Take all collected data from Phase 1 and categorize each activity into one of 6 business-value
-categories: 매출/딜리버리, 운영 효율화, 장애 & 보안 리스크 감소, 비용 절감, 채용 & 홍보,
-팀 빌딩/리더십.
-
 Use the keyword signals and source-based defaults from the template to auto-categorize.
 For ambiguous items, pick the category with the strongest signal match.
+If impact is quantified in the commit message or PR (e.g., "reduced from 50s to 22s") → use that number directly.
 
 Generate the report using the Korean or English template based on the config `language` setting.
 
-Save to: `{OUTPUT_DIR}/organize/{WEEK_END}-report.md`
+Save to: `{OUTPUT_DIR}/reports/{END}-report.md`
 
-### Step 3B: Resume generation (`resume` submode)
+---
+
+## Phase 2C: Resume Generation
 
 Read `references/resume-template.md` for the full competency framework, 13 evaluation
 perspectives, scoring rubric, and rewriting rules.
@@ -344,7 +363,42 @@ use AskUserQuestion to ask the user for context (batch 3-4 items per question).
 
 Generate the output using the Korean or English template based on the config `language` setting.
 
-Save to: `{OUTPUT_DIR}/organize/{WEEK_END}-resume.md`
+Save to: `{OUTPUT_DIR}/resume/{END}-resume.md`
+
+---
+
+## Phase 2H: HTML Generation (optional)
+
+**Skip this phase if `html_output` is false.**
+
+After generating the markdown output (Phase 2A, 2B, or 2C), convert it to a styled HTML file.
+Read `references/html-template.md` for the design system and structural mapping rules.
+
+### Process
+
+1. Read the generated markdown file.
+2. Generate a self-contained HTML file (inline CSS, no external dependencies except Google Fonts).
+3. Save to the same directory as the markdown file, with `.html` extension:
+   - Journal: `{OUTPUT_DIR}/journals/{WEEK_END}.html`
+   - Report: `{OUTPUT_DIR}/reports/{WEEK_END}-report.html`
+   - Resume: `{OUTPUT_DIR}/resume/{WEEK_END}-resume.html`
+4. Open the HTML file in the browser: `open {html_path}`
+
+### Design principles
+
+- **Self-contained**: All CSS inline. Only external dependency is Google Fonts (Noto Sans KR + Inter).
+- **Mode-aware styling**: Each mode has a distinct color accent — Journal (blue), Report (gradient blue-purple), Resume (green).
+- **Responsive**: Works on mobile and desktop. Print-optimized with `@media print`.
+- **Structural mapping**: Map markdown structure to semantic HTML components:
+  - `# H1` → header block with gradient background
+  - `## H2` → section header with numbered badge
+  - `### H3` → card with left border accent
+  - `**Bold label**: value` → styled key-value pair
+  - Bullet lists → styled list with colored dot indicators
+  - Tables → responsive styled tables
+  - `**임팩트**` / `**Impact**` blocks → highlighted impact box
+  - `**증거**` / `**Evidence**` → subtle reference line
+- **Stats bar**: Extract key numbers (PRs, commits, meetings, etc.) from the content and render as a top-level stats card row.
 
 ---
 
@@ -398,6 +452,7 @@ Save JSON to `{OUTPUT_DIR}/snapshots/{WEEK_END}.json`:
   },
   "failed_sources": [],
   "output_path": "{path to journal, impact report, or organize output}",
+  "html_path": "{path to .html file, or null if html_output is false}",
   "brag_items_added": 0
 }
 ```
@@ -421,6 +476,7 @@ Save JSON to `{OUTPUT_DIR}/snapshots/{WEEK_END}.json`:
 
 **저장된 파일:**
 - {journal / impact report / organize output}: `{path}`
+- HTML: `{html_path}` (html_output이 true일 때만 표시)
 - Brag doc: {N}개 항목 추가 (organize 모드에서는 생략)
 - 이력서: {업데이트됨 / pending / 변경 없음} (organize 모드에서는 생략)
 ```
@@ -429,6 +485,18 @@ For organize mode, the completion report additionally shows:
 - **서브모드**: report / resume
 - **카테고리 수**: {N}개 카테고리에 활동 분류됨
 - **이력서 스코어** (resume submode only): 평균 {N}/10, 리라이팅 제안 {N}건
+
+### Resume mode: 영문/한글 복사용 포맷 + 프리뷰 (4개 섹션)
+
+Resume 모드의 완료 보고 시, 위 테이블 아래에 아래 4개 섹션을 **모두** 대화에 출력한다:
+
+1. `## 복사용 포맷 (English)` — 영문 원본 코드블록 (LaTeX 또는 Markdown)
+2. `## 복사용 포맷 (한국어)` — 한글 원본 코드블록 (동일 매크로, 내용만 한국어)
+3. `## 프리뷰 (English)` — 영문 원본을 읽기 쉬운 Markdown으로 렌더링
+4. `## 프리뷰 (한국어)` — 한글 원본을 읽기 쉬운 Markdown으로 렌더링
+
+Markdown 파일(.md)과 HTML 파일(.html)에도 동일하게 4개 섹션을 모두 포함한다.
+**4개 중 하나라도 빠지면 안 된다.** 상세 규칙은 resume-template.md, html-template.md 참조.
 
 ---
 
