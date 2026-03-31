@@ -118,11 +118,11 @@
       \resumeProjectSubheading{On-premise AI Solution Platform}{Dec 2024 -- Present}
       \resumeItemListStart
         \resumeItem{Autonomous Team Agent (Milchick)}
-          {Manual briefings and Q\&A routing across 4+ teams created significant coordination overhead. Built a production Slack agent with \textbf{Solar/Claude} dual-LLM routing---Solar classifies intent, then routes to Claude CLI or Solar for execution---with eval test suite for quality assurance, knowledge system with selective context loading, and anti-leak protections. Also created reusable agent skills for account provisioning, license generation, and catalog management. Eliminated manual coordination and enabled self-service partner operations.}
+          {Manual briefings and Q\&A routing across 4+ teams created significant coordination overhead. Chose a dual-LLM architecture---Solar for fast intent classification, Claude for complex tool execution---to balance cost and quality. Built a production Slack agent with eval test suite, knowledge system with selective context loading, and anti-leak protections. Also created reusable agent skills for account provisioning, license generation, and catalog management. Now used daily by the entire SolarBox team for briefings, Q\&A, and partner operations.}
         \resumeItem{Enterprise Portal Lead}
           {Partners had no self-service way to access AI solution packages, requiring manual handoff per customer. Led development from requirements gathering to production: \textbf{AWS CDK} dev/prod separation, \textbf{GitHub Actions} CI/CD, \textbf{i18n} (83-file English translation), role-based draft versioning, and ``Edit with Claude'' AI-assisted editing. Enabled global partner self-service across AWS, Azure, and Snowflake.}
         \resumeItem{SolarBox Catalog \& Release}
-          {No centralized system existed for managing 50+ AI product versions across multi-tenant deployments. Built manifest API with search, pagination, and semantic versioning with CUDA suffix filtering; configured \textbf{Keycloak} SSO and \textbf{ClickHouse} migration tracking. Coordinated SolarBox 2.5 release across 4+ engineering teams, shipping 6 AI products to 3 cloud marketplaces simultaneously.}
+          {No centralized system existed for managing 80+ AI product catalogs across multi-tenant deployments. Built manifest API with search, pagination, and semantic versioning with CUDA suffix filtering; configured \textbf{Keycloak} SSO and \textbf{ClickHouse} migration tracking. Coordinated SolarBox 2.5 release across 4+ engineering teams, shipping 6 AI products to 3 cloud marketplaces simultaneously.}
         \resumeItem{Model Encryption Pipeline}
           {Manual encryption steps were bottlenecking catalog registration. Automated end-to-end LLM model encryption via GitHub Workflow, \textbf{Kubernetes} Job, and \textbf{Ansible}, with \textbf{AWS OIDC} for secure S3 artifact management and checksum verification. Eliminated all manual intervention from encryption through upload to verification.}
       \resumeItemListEnd
@@ -130,9 +130,9 @@
       \resumeProjectSubheading{Document AI Serving System}{Jul 2023 -- Present}
       \resumeItemListStart
         \resumeItem{Async Inference System}
-          {Synchronous-only inference couldn't scale for enterprise documents. Designed v1 with \textbf{SQS}/Lambda (SaaS) and RabbitMQ (On-prem), then simplified to v2 with \textbf{Asynq} (Go Redis queue) to reduce operational complexity. Cut async response time from 30s to 0.2s and 88-page processing from 21min to 4min. Now processes 160,000+ pages daily with \textbf{18x throughput} improvement over previous system.}
+          {Synchronous-only inference couldn't scale for enterprise documents. Designed v1 with \textbf{SQS}/Lambda (SaaS) and RabbitMQ (On-prem), then simplified to v2 with \textbf{Asynq} (Go Redis queue) to reduce operational complexity. Added CI-integrated sanity tests on every deploy and p1/p2/p3 alerting tiers for rapid incident response. Cut async response time from 30s to 0.2s and 88-page processing from 21min to 4min. Now processes 160,000+ pages daily with \textbf{18x throughput} improvement.}
         \resumeItem{Service Stability}
-          {A 10-month intermittent panic had defied debugging across the team. Traced the root cause to thread-unsafe \textbf{go-fitz} PDF library internals through systematic reproduction; applied application-level \textbf{Locking} as a targeted fix. Eliminated 10,000+ daily Segmentation Faults and reduced 500-error false alarms from 65/week to zero.}
+          {A 10-month intermittent panic had defied debugging across the team. Traced the root cause to thread-unsafe \textbf{go-fitz} PDF library internals through systematic reproduction; applied application-level \textbf{Locking} as a targeted fix. Set up \textbf{Prometheus}/Grafana monitoring for multi-node on-prem deployments. Eliminated 10,000+ daily Segmentation Faults and reduced 500-error false alarms from 65/week to zero.}
       \resumeItemListEnd
 
       \resumeProjectSubheading{Document AI MLOps Platform}{Feb 2022 -- Aug 2023}
