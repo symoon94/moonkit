@@ -11,5 +11,8 @@ Thumbs.db
 # Claude Code
 .claude/
 
+# Input (personal source files, not committed)
+input/
+
 # Output (user data, not committed)
 output/
