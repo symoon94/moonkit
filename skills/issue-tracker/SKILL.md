@@ -156,6 +156,14 @@ options:
 ```
 > "특정 이모지" 선택 시 → "Other"로 이모지 이름 입력받음 (예: `:team-issue:`)
 > "키워드 패턴" 선택 시 → 기본 패턴 사용 (아래 Phase 1 참조), 사용자가 추가 가능
+> "전체 스캔" 선택 시 → 아래 질문으로 스캔 대상 채널을 입력받음:
+> ```
+> question: "어떤 Slack 채널을 스캔할까요? 채널명을 콤마로 구분해서 입력해 주세요. (예: #general, #dev-alerts)"
+> header: "스캔 대상 채널"
+> options:
+>   - label: "직접 입력"
+>     description: "채널명을 콤마로 구분해서 입력합니다"
+> ```
 
 **Q5. Gmail 필터** (Gmail 선택 시에만)
 ```
@@ -373,7 +381,14 @@ query: "(또 OR 매번 OR 반복 OR 왜 항상) after:{PERIOD_START}"
 
 **전체 스캔** (`slack_signal: "full_scan"`):
 `slack_channels`에 지정된 채널을 `slack_read_channel`로 읽는다.
-채널이 지정되지 않았으면 사용자에게 채널 목록을 요청한다.
+채널이 지정되지 않았으면 아래 질문으로 채널 목록을 요청한다:
+```
+question: "어떤 Slack 채널을 스캔할까요? 채널명을 콤마로 구분해서 입력해 주세요. (예: #general, #dev-alerts)"
+header: "스캔 대상 채널"
+options:
+  - label: "직접 입력"
+    description: "채널명을 콤마로 구분해서 입력합니다"
+```
 
 **모든 모드 공통 — 스레드 확인**:
 각 메시지의 스레드를 `slack_read_thread`로 읽어서:
