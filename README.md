@@ -11,7 +11,7 @@ Claude Code에서 아래 명령어를 실행하세요:
 /plugin install moonkit@moonkit
 ```
 
-설치 후 `/issue-tracker`, `/work-log` 명령어를 사용할 수 있습니다.
+설치 후 `/issue-tracker`, `/work-log`, `/pr-follow-through` 명령어를 사용할 수 있습니다.
 
 ### Required MCP servers
 
@@ -24,6 +24,12 @@ Claude Code에서 아래 명령어를 실행하세요:
 | Notion | issue-tracker, work-log | Notion 페이지에 보고서 작성 |
 | Jira | work-log | 이슈 트래킹 데이터 |
 | Google Calendar | work-log | 미팅/일정 데이터 |
+
+### Required CLI
+
+| CLI | Used by | Purpose |
+|-----|---------|---------|
+| [`gh`](https://cli.github.com) | pr-follow-through | PR 체크 상태, 리뷰 스레드 조회/답글/resolve |
 
 ## Skills
 
@@ -60,6 +66,24 @@ GitHub, Slack, Jira, Google Calendar, Notion에서 활동을 수집해서 업무
 
 자세한 내용은 [skills/work-log/](skills/work-log/) 참고.
 
+### pr-follow-through
+
+PR을 만든 뒤 CI를 기다리고, 봇/사람 리뷰 코멘트를 코드와 대조해 검증하고,
+유효한 지적은 고쳐서 푸시·resolve, 무효한 지적은 근거를 대서 반박·resolve 하는 루프를 도는 스킬.
+
+```
+/pr-follow-through                          # 현재 브랜치의 PR
+/pr-follow-through 123                      # PR 번호
+/pr-follow-through https://github.com/o/r/pull/123
+```
+
+- 인라인 리뷰 스레드까지 빠짐없이 감사 (top-level 코멘트 API만으로는 누락됨)
+- 리뷰 코멘트를 "사실"이 아니라 "검증할 가설"로 취급 — 근거 없는 수정 금지
+- 수정이 원격에 푸시된 뒤에만 스레드 resolve
+- `gh` CLI 필요
+
+자세한 내용은 [skills/pr-follow-through/](skills/pr-follow-through/) 참고.
+
 ## Project structure
 
 ```
@@ -76,6 +100,10 @@ moonkit/
       SKILL.md                # Skill definition
       README.md               # Documentation
       references/             # Templates
+    pr-follow-through/
+      SKILL.md                # Skill definition
+      README.md               # Documentation
+      scripts/pr_watch.py     # PR checks + review thread audit
 ```
 
 ## License
